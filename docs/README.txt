@@ -1,9 +1,11 @@
 MQTT to HomeKit
 ==================
 
+Transparently bridge an MQTT topic to HomeKit.
+
 * Register as a HomeKit Bridge.
 * Listen for MQTT messages at `HomeKit/#`
-* Add services automatically.
+* Add accessories/services automatically.
 * Turn MQTT messages into HomeKit events.
 * Turn HomeKit events into MQTT messages.
 
@@ -20,17 +22,13 @@ For example, my DS18B20 temperature sensor would look like:
 
     HomeKit/28-0516c0fc92ff/TemperatureSensor/CurrentTemperature
 
-It would then send the current temperature whenever it feels the need to this topic.
+It would then send the current temperature whenever it wants to, to this topic.
 
 
 Where applicable, the device should also subscribe to it's own topics that it cares about.
 
-A garage door opener may listen to:
+A switch could subscribe to:
 
+    HomeKit/Sonoff-112154/Switch/On
 
-    HomeKit/GarageDoor001/GarageDoor/+/set
-
-
-
-Registering as a HomeKit Bridge
--------------------------------
+This is the topic to which the state change would be sent to when HomeKit triggers an On/Off event.
