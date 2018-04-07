@@ -10,6 +10,15 @@ Transparently bridge an MQTT topic tree to HomeKit.
 * Turn HomeKit events into MQTT messages.
 
 
+Usage.
+------
+
+    $ pipenv install
+    $ pipenv run mqtt2homekit/main.py
+
+As long as your MQTT broker is on the same machine as this bridge is running, then everything
+should work correctly. Otherwise, you'll need to change that hostname.
+
 
 MQTT Messages.
 ---------------
