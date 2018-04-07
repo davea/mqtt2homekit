@@ -62,13 +62,13 @@ def clean_value(characteristic, value):
 
 class Accessory(accessory.Accessory):
     def __init__(self, *args, **kwargs):
-        service = kwargs.pop('service')
+        services = kwargs.pop('services')
+        self.category = CATEGORIES.get(services[0], Category.OTHER)
         super().__init__(*args, **kwargs)
-        self.service = loader.get_serv_loader().get(service)
-        self.add_service(self.service)
-        self.category = CATEGORIES.get(service, Category.OTHER)
+        self.add_service(*(loader.get_serv_loader().get(service) for service in services))
 
-    def set_characteristic(self, characteristic_name, value):
-        characteristic = self.service.get_characteristic(characteristic_name)
+    def set_characteristic(self, service_type, characteristic_name, value):
+        service = self.get_service(service_type)
+        characteristic = service.get_characteristic(characteristic_name)
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
