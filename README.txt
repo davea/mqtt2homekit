@@ -1,7 +1,7 @@
 MQTT to HomeKit
 ==================
 
-Transparently bridge an MQTT topic to HomeKit.
+Transparently bridge an MQTT topic tree to HomeKit.
 
 * Register as a HomeKit Bridge.
 * Listen for MQTT messages at `HomeKit/#`
