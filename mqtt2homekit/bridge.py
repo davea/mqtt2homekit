@@ -58,7 +58,7 @@ class BridgeEncoder(object):
                         if service.display_name != 'AccessoryInformation'
                     ],
                     "aid": accessory.aid,
-                    "last_seen": accessory.__last_seen,
+                    "last_seen": getattr(accessory, '__last_seen', time.time()),
                 }
                 for key, accessory in bridge.known_accessories.items()
             ]
@@ -76,14 +76,12 @@ class BridgeEncoder(object):
         bridge.private_key = ed25519.SigningKey(fromhex(state["private_key"]))
         bridge.public_key = ed25519.VerifyingKey(fromhex(state["public_key"]))
 
-        # As mentioned above, we don't want to load the accessories into the
-        # bridge because if they have been removed from the network, we don't
-        # want to show them in HomeKit.
         for accessory in state.get('accessories', []):
             acc = Accessory(
                 accessory['name'],
                 aid=accessory['aid'],
-                services=accessory['services']
+                services=accessory['services'],
+                accessory_id=accessory['accessory_id'],
             )
             acc.__last_seen = accessory.get('last_seen', time.time())
             bridge.known_accessories[accessory['accessory_id']] = acc
@@ -130,7 +128,7 @@ class MQTTBridge(Bridge):
         if accessory_id not in self.known_accessories:
             # Need to add this accessory to our registry.
             # If this is not a valid accessory main service, we should just exit now...
-            accessory = Accessory(display_name(service_type), services=[service_type])
+            accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
             accessory.set_sentinel(self.run_sentinel)
             self.known_accessories[accessory_id] = accessory
             self.add_accessory(accessory)
@@ -173,6 +171,7 @@ class MQTTBridge(Bridge):
 
     def stop(self):
         self.client.loop_stop(force=True)
+        self.persist()
 
     def run(self):
         while not self.run_sentinel.wait(ONE_HOUR):
