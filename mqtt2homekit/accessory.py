@@ -1,4 +1,5 @@
-from pyhap import accessory, loader
+from pyhap import accessory
+from pyhap.loader import get_serv_loader
 from pyhap.accessory import Category
 
 CATEGORIES = {
@@ -53,6 +54,8 @@ COERCE = {
     'bool': int
 }
 
+loader = get_serv_loader()
+
 
 def clean_value(characteristic, value):
     if characteristic.properties['Format'] in COERCE:
@@ -63,12 +66,28 @@ def clean_value(characteristic, value):
 class Accessory(accessory.Accessory):
     def __init__(self, *args, **kwargs):
         services = kwargs.pop('services')
+        accessory_id = kwargs.pop('accessory_id')
         self.category = CATEGORIES.get(services[0], Category.OTHER)
         super().__init__(*args, **kwargs)
-        self.add_service(*(loader.get_serv_loader().get(service) for service in services))
+        self.set_information_service(
+            Name=self.display_name,
+            SerialNumber=accessory_id,
+            Manufacturer='Matthew Schinckel',
+            Model='MQTT Bridged {}'.format(services[0]),
+        )
+        self.add_service(*(loader.get(service) for service in services))
+
+    def set_information_service(self, **info):
+        info_service = loader.get('AccessoryInformation')
+        for key in ['Name', 'Manufacturer', 'Model', 'SerialNumber']:
+            info_service.get_characteristic(key).set_value(info.get(key, ''))
+        self.add_service(info_service)
 
     def set_characteristic(self, service_type, characteristic_name, value):
         service = self.get_service(service_type)
         characteristic = service.get_characteristic(characteristic_name)
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
+
+    def _set_services(self):
+        pass
