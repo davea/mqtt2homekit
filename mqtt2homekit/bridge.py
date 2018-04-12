@@ -57,7 +57,8 @@ class BridgeEncoder(object):
                         for service in accessory.services
                         if service.display_name != 'AccessoryInformation'
                     ],
-                    "aid": accessory.aid
+                    "aid": accessory.aid,
+                    "last_seen": accessory.__last_seen,
                 }
                 for key, accessory in bridge.known_accessories.items()
             ]
@@ -79,11 +80,14 @@ class BridgeEncoder(object):
         # bridge because if they have been removed from the network, we don't
         # want to show them in HomeKit.
         for accessory in state.get('accessories', []):
-            bridge.known_accessories[accessory['accessory_id']] = Accessory(
+            acc = Accessory(
                 accessory['name'],
                 aid=accessory['aid'],
                 services=accessory['services']
             )
+            acc.__last_seen = accessory.get('last_seen', time.time())
+            bridge.known_accessories[accessory['accessory_id']] = acc
+            bridge.add_accessory(acc)
 
 
 class MQTTBridge(Bridge):
@@ -114,7 +118,8 @@ class MQTTBridge(Bridge):
         super().add_accessory(accessory)
         for service in accessory.services:
             for characteristic in service.characteristics:
-                characteristic.setter_callback = lambda value: self.send_mqtt_message(accessory, service, characteristic, value)
+                characteristic.setter_callback = lambda value: self.send_mqtt_message(
+                    accessory, service, characteristic, value)
 
     def get_accessory_key(self, accessory):
         for key, known in self.known_accessories.items():
@@ -131,19 +136,17 @@ class MQTTBridge(Bridge):
             self.add_accessory(accessory)
             self.config_changed()
             self.persist()
-        else:
-            accessory = self.known_accessories[accessory_id]
-            if not accessory.get_service(service_type):
-                # Need to add this service to this registry.
-                service = get_serv_loader().get(service_type)
-                accessory.add_service(service)
-                accessory.services.append(service)
-                self.config_changed()
-                self.persist()
-            if accessory.aid not in self.accessories:
-                self.add_accessory(accessory)
-                self.config_changed()
-                self.persist()
+        accessory = self.known_accessories[accessory_id]
+
+        if not accessory.get_service(service_type):
+            service = get_serv_loader().get(service_type)
+            self.accessories.pop(accessory.aid)
+            accessory.aid = None
+            accessory.add_service(service)
+            self.add_accessory(accessory)
+            self.config_changed()
+            self.persist()
+
         return accessory
 
     @property
@@ -161,7 +164,7 @@ class MQTTBridge(Bridge):
 
     def start(self, mqtt_server='localhost', mqtt_port=1883, mqtt_timeout=60):
         self.client = mqtt.Client()
-        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#')
+        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
         self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
         self.driver.start()
         self.config_changed()
@@ -178,35 +181,44 @@ class MQTTBridge(Bridge):
     def persist(self):
         return self.driver.persist()
 
-    def hide_unseen(self, since=ONE_DAY):
+    def hide_unseen(self, since=ONE_DAY * 28):
         # When should we remove them from known_accessories? After FOUR_WEEKS?
         now = time.time()
-        for aid, acc in list(self.accessories.items()):
+        for accessory_id, acc in list(self.known_accessories.items()):
             if now - acc.__last_seen > since:
-                self.accessories.pop(aid)
+                self.accessories.pop(acc.aid)
+                self.known_accessories.pop(accessory_id)
                 self.config_changed()
 
     def handle_mqtt_message(self, client, userdata, message):
-        # TODO: Handle exceptions in here.
-        _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
-        accessory = self.get_or_create_accessory(accessory_id, service_type)
-        value = message.payload.decode('ascii')
-        LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
-            accessory_id=accessory_id,
-            service_type=service_type,
-            characteristic=characteristic,
-            value=value,
-        ))
-        accessory.set_characteristic(service_type, characteristic, value)
-        accessory.__last_seen = time.time()
+        try:
+            _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
+            accessory = self.get_or_create_accessory(accessory_id, service_type)
+            value = message.payload.decode('ascii')
+            LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
+                accessory_id=accessory_id,
+                service_type=service_type,
+                characteristic=characteristic,
+                value=value,
+            ))
+            accessory.set_characteristic(service_type, characteristic, value)
+            accessory.__last_seen = time.time()
+        except Exception as exc:
+            LOGGER.error('Exception handling message {}'.format(exc.args))
 
     def send_mqtt_message(self, accessory, service, characteristic, value):
-        # TODO: Handle exceptions in here.
-        self.client.publish(
-            'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
-                accessory_id=self.get_accessory_key(accessory),
-                service=service.display_name,
-                characteristic=characteristic,
-            ),
-            str(value)
-        )
+        # We always send messages with QoS 2 - this means clients may choose how they want
+        # to subscribe.
+        # Should this be setting persist=True? I feel like that's up to the actual device.
+        try:
+            self.client.publish(
+                'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
+                    accessory_id=self.get_accessory_key(accessory),
+                    service=service.display_name,
+                    characteristic=characteristic,
+                ),
+                str(value),
+                qos=2,
+            )
+        except Exception as exc:
+            LOGGER.error('Exception sending message: {}'.format(exc.args))
