@@ -66,12 +66,12 @@ def clean_value(characteristic, value):
 class Accessory(accessory.Accessory):
     def __init__(self, *args, **kwargs):
         services = kwargs.pop('services')
-        accessory_id = kwargs.pop('accessory_id')
+        self.accessory_id = kwargs.pop('accessory_id')
         self.category = CATEGORIES.get(services[0], Category.OTHER)
         super().__init__(*args, **kwargs)
         self.set_information_service(
             Name=self.display_name,
-            SerialNumber=accessory_id,
+            SerialNumber=self.accessory_id,
             Manufacturer='Matthew Schinckel',
             Model='MQTT Bridged {}'.format(services[0]),
         )
