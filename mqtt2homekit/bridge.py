@@ -44,13 +44,10 @@ class BridgeEncoder(object):
             "paired_clients": paired_clients,
             "private_key": tohex(bridge.private_key.to_seed()),
             "public_key":  tohex(bridge.public_key.to_bytes()),
-            # We need to be able to load all of the existing accessories, ensuring
-            # they retain their aid, but we don't always want to add them to the
-            # bridge, until we see they still exist on the network. So, we need to
-            # store the aid here.
+            # We need to be able to load all of the existing accessories, with aid and last access time.
             "accessories": [
                 {
-                    "accessory_id": key,
+                    "accessory_id": accessory.accessory_id,
                     "name": accessory.display_name,
                     "services": [
                         service.display_name
@@ -60,7 +57,7 @@ class BridgeEncoder(object):
                     "aid": accessory.aid,
                     "last_seen": getattr(accessory, '__last_seen', time.time()),
                 }
-                for key, accessory in bridge.known_accessories.items()
+                for aid, accessory in bridge.accessories.items() if aid != 1
             ]
         }
         json.dump(config_state, fp)
@@ -84,7 +81,6 @@ class BridgeEncoder(object):
                 accessory_id=accessory['accessory_id'],
             )
             acc.__last_seen = accessory.get('last_seen', time.time())
-            bridge.known_accessories[accessory['accessory_id']] = acc
             bridge.add_accessory(acc)
 
 
@@ -95,7 +91,6 @@ class MQTTBridge(Bridge):
         self._driver = None
         self._mqtt_settings = kwargs.pop('mqtt_settings', {})
         super().__init__(*args, **kwargs)
-        self.known_accessories = {}
 
     def _set_services(self):
         info_service = get_serv_loader().get("AccessoryInformation")
@@ -119,10 +114,9 @@ class MQTTBridge(Bridge):
                 characteristic.setter_callback = lambda value: self.send_mqtt_message(
                     accessory, service, characteristic, value)
 
-    def get_accessory_key(self, accessory):
-        for key, known in self.known_accessories.items():
-            if accessory == known:
-                return key
+    @property
+    def known_accessories(self):
+        return {accessory.accessory_id: accessory for accessory in self.accessories.values()}
 
     def get_or_create_accessory(self, accessory_id, service_type):
         if accessory_id not in self.known_accessories:
@@ -130,7 +124,6 @@ class MQTTBridge(Bridge):
             # If this is not a valid accessory main service, we should just exit now...
             accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
             accessory.set_sentinel(self.run_sentinel)
-            self.known_accessories[accessory_id] = accessory
             self.add_accessory(accessory)
             self.config_changed()
             self.persist()
@@ -183,10 +176,9 @@ class MQTTBridge(Bridge):
     def hide_unseen(self, since=ONE_DAY * 28):
         # When should we remove them from known_accessories? After FOUR_WEEKS?
         now = time.time()
-        for accessory_id, acc in list(self.known_accessories.items()):
+        for acc in list(self.accessories.values()):
             if now - acc.__last_seen > since:
                 self.accessories.pop(acc.aid)
-                self.known_accessories.pop(accessory_id)
                 self.config_changed()
 
     def handle_mqtt_message(self, client, userdata, message):
@@ -212,7 +204,7 @@ class MQTTBridge(Bridge):
         try:
             self.client.publish(
                 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
-                    accessory_id=self.get_accessory_key(accessory),
+                    accessory_id=accessory.accessory_id,
                     service=service.display_name,
                     characteristic=characteristic,
                 ),
