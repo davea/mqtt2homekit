@@ -92,7 +92,6 @@ class MQTTBridge(Bridge):
         try:
             self.client = MQTTClient()
             yield from self.client.connect(uri)
-            print(self.client._handler)
             yield from self.client.subscribe([('HomeKit/+/+/+', QOS_1)])
             while True:
                 message = yield from self.client.deliver_message()
