@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-paho-mqtt = "*"
 HAP-python = "*"
+hbmqtt = "*"
 
 [dev-packages]
 

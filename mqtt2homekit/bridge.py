@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 import signal
@@ -7,7 +8,7 @@ import logging
 
 import ed25519
 
-from paho.mqtt import client as mqtt
+from hbmqtt.client import MQTTClient, ClientException, QOS_1
 
 from pyhap.accessory import Bridge
 from pyhap.loader import get_serv_loader
@@ -89,7 +90,6 @@ class MQTTBridge(Bridge):
         self.persist_file = kwargs.pop('persist_file')
         self.port = random.randint(50000, 60000)
         self._driver = None
-        self._mqtt_settings = kwargs.pop('mqtt_settings', {})
         super().__init__(*args, **kwargs)
 
     def _set_services(self):
@@ -153,17 +153,30 @@ class MQTTBridge(Bridge):
             signal.signal(signal.SIGTERM, self._driver.signal_handler)
         return self._driver
 
-    def start(self, mqtt_server='localhost', mqtt_port=1883, mqtt_timeout=60):
-        self.client = mqtt.Client()
-        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
-        self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
+    @asyncio.coroutine
+    def start_mqtt_client(self, uri):
+        try:
+            self.client = MQTTClient()
+            yield from self.client.connect(uri)
+            print(self.client._handler)
+            yield from self.client.subscribe([('HomeKit/+/+/+', QOS_1)])
+            while True:
+                message = yield from self.client.deliver_message()
+                yield from self.handle_mqtt_message(message)
+        except ClientException as ce:
+            LOGGER.error('Client exception: %s' % ce)
+        finally:
+            # disconnect() when not connected is explicitly ignored.
+            yield from self.client.disconnect()
+            self.driver.stop()
+
+    def start(self, uri):
         self.driver.start()
         self.config_changed()
-        self.client.connect(mqtt_server, mqtt_port, mqtt_timeout)
-        self.client.loop_start()
+        asyncio.get_event_loop().run_until_complete(self.start_mqtt_client(uri))
 
     def stop(self):
-        self.client.loop_stop(force=True)
+        asyncio.get_event_loop().stop()
         self.persist()
 
     def run(self):
@@ -181,11 +194,12 @@ class MQTTBridge(Bridge):
                 self.accessories.pop(acc.aid)
                 self.config_changed()
 
-    def handle_mqtt_message(self, client, userdata, message):
+    @asyncio.coroutine
+    def handle_mqtt_message(self, message):
         try:
             _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
             accessory = self.get_or_create_accessory(accessory_id, service_type)
-            value = message.payload.decode('ascii')
+            value = message.data.decode()
             LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
                 accessory_id=accessory_id,
                 service_type=service_type,
