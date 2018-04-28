@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-HAP-python = "*"
+HAP-python = {git = "https://github.com/ikalchev/HAP-python.git", editable = true, ref = "dev"}
 hbmqtt = "*"
 
 [dev-packages]

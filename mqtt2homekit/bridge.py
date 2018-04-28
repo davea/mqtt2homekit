@@ -26,12 +26,13 @@ ONE_DAY = ONE_HOUR * 24
 class MQTTBridge(Bridge):
     def __init__(self, *args, **kwargs):
         self.persist_file = kwargs.pop('persist_file')
+        self.mqtt_server = kwargs.pop('mqtt_server')
         self.port = random.randint(50000, 60000)
         self._driver = None
         super().__init__(*args, **kwargs)
 
     def _set_services(self):
-        info_service = get_serv_loader().get("AccessoryInformation")
+        info_service = get_serv_loader().get_service("AccessoryInformation")
         info_service.get_characteristic("Name").set_value('MQTT Bridge', False)
         info_service.get_characteristic("Manufacturer").set_value("Matthew Schinckel", False)
         info_service.get_characteristic("Model").set_value("Bridge", False)
@@ -57,14 +58,14 @@ class MQTTBridge(Bridge):
             # Need to add this accessory to our registry.
             # If this is not a valid accessory main service, we should just exit now...
             accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
-            accessory.set_sentinel(self.run_sentinel)
+            accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
             self.add_accessory(accessory)
             self.config_changed()
             self.persist()
         accessory = self.known_accessories[accessory_id]
 
         if not accessory.get_service(service_type):
-            service = get_serv_loader().get(service_type)
+            service = get_serv_loader().get_service(service_type)
             self.accessories.pop(accessory.aid)
             accessory.aid = None
             accessory.add_service(service)
@@ -88,10 +89,10 @@ class MQTTBridge(Bridge):
         return self._driver
 
     @asyncio.coroutine
-    def start_mqtt_client(self, uri):
+    def start_mqtt_client(self):
         try:
             self.client = MQTTClient()
-            yield from self.client.connect(uri)
+            yield from self.client.connect(self.mqtt_server)
             yield from self.client.subscribe([('HomeKit/+/+/+', QOS_1)])
             while True:
                 message = yield from self.client.deliver_message()
@@ -101,26 +102,23 @@ class MQTTBridge(Bridge):
         finally:
             # disconnect() when not connected is explicitly ignored.
             yield from self.client.disconnect()
-            self.driver.stop()
 
-    def start(self, uri):
+    def start(self):
         self.driver.start()
-        self.config_changed()
-        asyncio.get_event_loop().run_until_complete(self.start_mqtt_client(uri))
 
     def stop(self):
         asyncio.get_event_loop().stop()
         self.persist()
 
     def run(self):
-        while not self.run_sentinel.wait(ONE_HOUR):
-            self.hide_unseen()
+        asyncio.ensure_future(self.start_mqtt_client())
+        asyncio.get_event_loop().run_forever()
 
     def persist(self):
         return self.driver.persist()
 
-    def hide_unseen(self, since=ONE_DAY * 28):
-        # When should we remove them from known_accessories? After FOUR_WEEKS?
+    @Bridge.run_at_interval(ONE_HOUR)
+    def remove_missing(self, since=ONE_DAY * 28):
         now = time.time()
         for acc in list(self.accessories.values()):
             if now - acc.__last_seen > since:
