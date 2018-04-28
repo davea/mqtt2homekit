@@ -6,8 +6,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def main():
-    bridge = MQTTBridge('MQTT Bridge', persist_file='bridge.state')
-    bridge.start('mqtt://mqtt.local:1883')
+    MQTTBridge('MQTT Bridge', persist_file='bridge.state', mqtt_server='mqtt://mqtt.local:1883').start()
 
 
 if __name__ == '__main__':

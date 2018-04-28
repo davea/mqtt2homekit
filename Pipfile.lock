@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3d03ba380e02fd2772b80d63950d3ec28c6f850434c51f934c127c84bc2a28c0"
+            "sha256": "2d27d6a95bcdac490369b6a10b6629a17f4f37b2112cab82ba00ebc4d31ee5fe"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -49,11 +49,9 @@
             "version": "==1.4"
         },
         "hap-python": {
-            "hashes": [
-                "sha256:2d08996d688deff977082671ac78c1aa5474bb2c31c3e4b2483bd0384459108f"
-            ],
-            "index": "pypi",
-            "version": "==1.1.9"
+            "editable": true,
+            "git": "https://github.com/ikalchev/HAP-python.git",
+            "ref": "5214d454ed664eca1ebc289f5f8359ebff732304"
         },
         "hbmqtt": {
             "hashes": [

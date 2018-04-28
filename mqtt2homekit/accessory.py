@@ -1,46 +1,46 @@
-from pyhap import accessory
+from pyhap import accessory, const
 from pyhap.loader import get_serv_loader
-from pyhap.accessory import Category
+
 
 CATEGORIES = {
-    'AirPurifier': Category.OTHER,
-    'AirQualitySensor': Category.SENSOR,
-    'BatteryService': Category.OTHER,
-    'CarbonDioxideSensor': Category.SENSOR,
-    'CarbonMonoxideSensor': Category.SENSOR,
-    'ContactSensor': Category.SENSOR,
-    'Door': Category.DOOR,
-    'Doorbell': Category.OTHER,
-    'Fan': Category.FAN,
-    'Fanv2': Category.FAN,
-    'Faucet': Category.OTHER,
-    'FilterMaintenance': Category.OTHER,
-    'GarageDoorOpener': Category.GARAGE_DOOR_OPENER,
-    'HeaterCooler': Category.THERMOSTAT,
-    'HumidifierDehumidifier': Category.THERMOSTAT,
-    'HumiditySensor': Category.SENSOR,
-    'IrrigationSystem': Category.OTHER,
-    'LeakSensor': Category.SENSOR,
-    'LightSensor': Category.SENSOR,
-    'Lightbulb': Category.LIGHTBULB,
-    'LockManagement': Category.DOOR_LOCK,
-    'LockMechanism': Category.DOOR_LOCK,
-    'Microphone': Category.OTHER,
-    'MotionSensor': Category.SENSOR,
-    'OccupancySensor': Category.SENSOR,
-    'Outlet': Category.OUTLET,
-    'SecuritySystem': Category.ALARM_SYSTEM,
-    'ServiceLabel': Category.OTHER,
-    'Slat': Category.WINDOW_COVERING,
-    'SmokeSensor': Category.SENSOR,
-    'Speaker': Category.OTHER,
-    'StatelessProgrammableSwitch': Category.PROGRAMMABLE_SWITCH,
-    'Switch': Category.SWITCH,
-    'TemperatureSensor': Category.SENSOR,
-    'Thermostat': Category.THERMOSTAT,
-    'Valve': Category.OTHER,
-    'Window': Category.WINDOW,
-    'WindowCovering': Category.WINDOW_COVERING,
+    'AirPurifier': const.CATEGORY_OTHER,
+    'AirQualitySensor': const.CATEGORY_SENSOR,
+    'BatteryService': const.CATEGORY_OTHER,
+    'CarbonDioxideSensor': const.CATEGORY_SENSOR,
+    'CarbonMonoxideSensor': const.CATEGORY_SENSOR,
+    'ContactSensor': const.CATEGORY_SENSOR,
+    'Door': const.CATEGORY_DOOR,
+    'Doorbell': const.CATEGORY_OTHER,
+    'Fan': const.CATEGORY_FAN,
+    'Fanv2': const.CATEGORY_FAN,
+    'Faucet': const.CATEGORY_OTHER,
+    'FilterMaintenance': const.CATEGORY_OTHER,
+    'GarageDoorOpener': const.CATEGORY_GARAGE_DOOR_OPENER,
+    'HeaterCooler': const.CATEGORY_THERMOSTAT,
+    'HumidifierDehumidifier': const.CATEGORY_THERMOSTAT,
+    'HumiditySensor': const.CATEGORY_SENSOR,
+    'IrrigationSystem': const.CATEGORY_OTHER,
+    'LeakSensor': const.CATEGORY_SENSOR,
+    'LightSensor': const.CATEGORY_SENSOR,
+    'Lightbulb': const.CATEGORY_LIGHTBULB,
+    'LockManagement': const.CATEGORY_DOOR_LOCK,
+    'LockMechanism': const.CATEGORY_DOOR_LOCK,
+    'Microphone': const.CATEGORY_OTHER,
+    'MotionSensor': const.CATEGORY_SENSOR,
+    'OccupancySensor': const.CATEGORY_SENSOR,
+    'Outlet': const.CATEGORY_OUTLET,
+    'SecuritySystem': const.CATEGORY_ALARM_SYSTEM,
+    'ServiceLabel': const.CATEGORY_OTHER,
+    'Slat': const.CATEGORY_WINDOW_COVERING,
+    'SmokeSensor': const.CATEGORY_SENSOR,
+    'Speaker': const.CATEGORY_OTHER,
+    'StatelessProgrammableSwitch': const.CATEGORY_PROGRAMMABLE_SWITCH,
+    'Switch': const.CATEGORY_SWITCH,
+    'TemperatureSensor': const.CATEGORY_SENSOR,
+    'Thermostat': const.CATEGORY_THERMOSTAT,
+    'Valve': const.CATEGORY_OTHER,
+    'Window': const.CATEGORY_WINDOW,
+    'WindowCovering': const.CATEGORY_WINDOW_COVERING,
 }
 
 
@@ -63,11 +63,11 @@ def clean_value(characteristic, value):
     return value
 
 
-class Accessory(accessory.Accessory):
+class Accessory(accessory.AsyncAccessory):
     def __init__(self, *args, **kwargs):
         services = kwargs.pop('services')
         self.accessory_id = kwargs.pop('accessory_id')
-        self.category = CATEGORIES.get(services[0], Category.OTHER)
+        self.category = CATEGORIES.get(services[0], const.CATEGORY_OTHER)
         super().__init__(*args, **kwargs)
         self.set_information_service(
             Name=self.display_name,
@@ -75,10 +75,10 @@ class Accessory(accessory.Accessory):
             Manufacturer='Matthew Schinckel',
             Model='MQTT Bridged {}'.format(services[0]),
         )
-        self.add_service(*(loader.get(service) for service in services))
+        self.add_service(*(loader.get_service(service) for service in services))
 
     def set_information_service(self, **info):
-        info_service = loader.get('AccessoryInformation')
+        info_service = loader.get_service('AccessoryInformation')
         for key in ['Name', 'Manufacturer', 'Model', 'SerialNumber']:
             info_service.get_characteristic(key).set_value(info.get(key, ''))
         self.add_service(info_service)
