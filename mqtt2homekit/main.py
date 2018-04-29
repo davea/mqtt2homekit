@@ -2,7 +2,7 @@ import logging
 
 from bridge import MQTTBridge
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

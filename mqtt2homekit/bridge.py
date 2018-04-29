@@ -3,7 +3,7 @@ import random
 import signal
 import time
 import logging
-
+from functools import partial
 
 from hbmqtt.client import MQTTClient, ClientException, QOS_1
 
@@ -46,47 +46,38 @@ class MQTTBridge(Bridge):
         super().add_accessory(accessory)
         for service in accessory.services:
             for characteristic in service.characteristics:
-                characteristic.setter_callback = lambda value: self.send_mqtt_message(
-                    accessory, service, characteristic, value)
-
-    @property
-    def known_accessories(self):
-        return {accessory.accessory_id: accessory for accessory in self.accessories.values()}
+                characteristic.setter_callback = partial(self.send_mqtt_message, accessory, service, characteristic)
 
     def get_or_create_accessory(self, accessory_id, service_type):
-        if accessory_id not in self.known_accessories:
-            # Need to add this accessory to our registry.
-            # If this is not a valid accessory main service, we should just exit now...
-            accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
-            accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
-            self.add_accessory(accessory)
-            self.config_changed()
-            self.persist()
-        accessory = self.known_accessories[accessory_id]
+        """
+        Dynamically find or add an accessory with the provided id and service_type.
 
-        if not accessory.get_service(service_type):
-            service = get_serv_loader().get_service(service_type)
-            self.accessories.pop(accessory.aid)
-            accessory.aid = None
-            accessory.add_service(service)
-            self.add_accessory(accessory)
-            self.config_changed()
-            self.persist()
+        If we already have an accessory with this id, and a different type, then add
+        a new service to that accessory.
 
+        Either of these conditions should result in the bridge updating HomeKit, and
+        also persisting data to the disk: any other situation should just return
+        the relevant accessory.
+        """
+        for accessory in self.accessories.values():
+            if accessory_id == accessory.accessory_id:
+                # Does this accessory have this service_type?
+                if not accessory.get_service(service_type):
+                    # We need to add the service, but remove the accessory and then re-add it.
+                    # Otherwise, HomeKit will get all screwed up, and the bridge won't work anymore.
+                    self.accessories.pop(accessory.aid)
+                    accessory.aid = None
+                    accessory.add_service(get_serv_loader().get_service(service_type))
+                    self.add_accessory(accessory)
+                    self.config_changed()
+                return accessory
+
+        # Did not find the accessory: we need to create it.
+        accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
+        accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
+        self.add_accessory(accessory)
+        self.config_changed()
         return accessory
-
-    @property
-    def driver(self):
-        if not self._driver:
-            self._driver = AccessoryDriver(
-                self,
-                port=self.port,
-                persist_file=self.persist_file,
-                encoder=BridgeEncoder()
-            )
-            signal.signal(signal.SIGINT, self._driver.signal_handler)
-            signal.signal(signal.SIGTERM, self._driver.signal_handler)
-        return self._driver
 
     @asyncio.coroutine
     def start_mqtt_client(self):
@@ -96,7 +87,7 @@ class MQTTBridge(Bridge):
             yield from self.client.subscribe([('HomeKit/+/+/+', QOS_1)])
             while True:
                 message = yield from self.client.deliver_message()
-                yield from self.handle_mqtt_message(message)
+                self.handle_mqtt_message(message)
         except ClientException as ce:
             LOGGER.error('Client exception: %s' % ce)
         finally:
@@ -104,18 +95,26 @@ class MQTTBridge(Bridge):
             yield from self.client.disconnect()
 
     def start(self):
-        self.driver.start()
+        """
+        Create, and start, a driver for this accessory.
+        """
+        driver = AccessoryDriver(
+            self,
+            port=self.port,
+            persist_file=self.persist_file,
+            encoder=BridgeEncoder()
+        )
+        signal.signal(signal.SIGINT, driver.signal_handler)
+        signal.signal(signal.SIGTERM, driver.signal_handler)
+        driver.start()
 
     def stop(self):
         asyncio.get_event_loop().stop()
-        self.persist()
 
     def run(self):
+        self.loop = asyncio.get_event_loop()
         asyncio.ensure_future(self.start_mqtt_client())
-        asyncio.get_event_loop().run_forever()
-
-    def persist(self):
-        return self.driver.persist()
+        self.loop.run_forever()
 
     @Bridge.run_at_interval(ONE_HOUR)
     def remove_missing(self, since=ONE_DAY * 28):
@@ -125,7 +124,6 @@ class MQTTBridge(Bridge):
                 self.accessories.pop(acc.aid)
                 self.config_changed()
 
-    @asyncio.coroutine
     def handle_mqtt_message(self, message):
         try:
             _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
@@ -137,6 +135,7 @@ class MQTTBridge(Bridge):
                 characteristic=characteristic,
                 value=value,
             ))
+            # If we have an empty message, then perhaps we need to do nothing...?
             accessory.set_characteristic(service_type, characteristic, value)
             accessory.__last_seen = time.time()
         except Exception as exc:
@@ -147,14 +146,14 @@ class MQTTBridge(Bridge):
         # to subscribe.
         # Should this be setting persist=True? I feel like that's up to the actual device.
         try:
-            self.client.publish(
+            asyncio.run_coroutine_threadsafe(self.client.publish(
                 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
                     accessory_id=accessory.accessory_id,
                     service=service.display_name,
                     characteristic=characteristic,
                 ),
-                str(value),
+                str(value).encode(),
                 qos=2,
-            )
+            ), self.loop)
         except Exception as exc:
             LOGGER.error('Exception sending message: {}'.format(exc.args))
