@@ -88,6 +88,7 @@ class Accessory(accessory.AsyncAccessory):
         characteristic = service.get_characteristic(characteristic_name)
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
+        characteristic.notify()
 
     def _set_services(self):
         pass
