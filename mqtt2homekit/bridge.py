@@ -79,6 +79,16 @@ class MQTTBridge(Bridge):
         self.config_changed()
         return accessory
 
+    def remove_accessory(self, accessory_id):
+        for aid, accessory in self.accessories.items():
+            if accessory_id == accessory.accessory_id:
+                break
+        else:
+            return
+
+        self.accessories.pop(aid)
+        self.config_changed()
+
     @asyncio.coroutine
     def start_mqtt_client(self):
         try:
@@ -125,8 +135,14 @@ class MQTTBridge(Bridge):
                 self.config_changed()
 
     def handle_mqtt_message(self, message):
+        _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
+
+        if not message.data:
+            # Should we only do this if it's the only service?
+            # Otherwise we should remove the service, maybe?
+            return self.remove_accessory(accessory_id)
+
         try:
-            _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
             accessory = self.get_or_create_accessory(accessory_id, service_type)
             value = message.data.decode()
             LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
