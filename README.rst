@@ -44,6 +44,14 @@ A switch could subscribe to::
 This is the topic to which the state change would be sent to when HomeKit triggers an On/Off event.
 
 
+Removing accessories.
+---------------------
+
+When an empty message is received, it will remove the accessory.
+
+(Maybe it should remove the service, unless this is the only service).
+
+
 Bridging behaviour.
 -------------------
 
