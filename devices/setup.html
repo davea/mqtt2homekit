@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Configuration</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.42/css/uikit.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.42/js/uikit.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.0.0-beta.42/js/uikit-icons.min.js"></script>
+  </head>
+  <body class="uk-container">
+    <h1 class="uk-heading-divider uk-text-center">Device Setup</h1>
+
+    <form class="uk-form uk-form-stacked">
+
+      <fieldset class="uk-fieldset">
+        <legend class="uk-legend">WiFi</legend>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">SSID</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: rss"></span>
+            <input value="{ssid}" class="uk-input" name="wifi[ssid]" placeholder="SSID">
+          </div>
+        </div>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">Passphrase</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: lock"></span>
+            <input value="{psk}" class="uk-input" name="wifi[psk]" placeholder="Passphrase" type="password">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="uk-fieldset">
+        <legend class="uk-legend">MQTT</legend>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">Broker</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: server"></span>
+            <input value="{broker}" class="uk-input" name="mqtt[broker]" placeholder="Broker">
+          </div>
+        </div>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">Port</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: hashtag"></span>
+            <input value="{port}" class="uk-input" name="mqtt[port]" placeholder="1883">
+          </div>
+        </div>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">Client ID</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: user"></span>
+            <input value="{client_id}" class="uk-input" name="mqtt[client_id]" placeholder="{device_id}">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="uk-fieldset">
+        <legend class="uk-legend">Settings</legend>
+
+        <div class="uk-form-row">
+          <label class="uk-form-label">Sleep time</label>
+          <div class="uk-form-controls uk-inline">
+            <span class="uk-form-icon" uk-icon="icon: future"></span>
+            <input value="{deep_sleep}" class="uk-input" name="deep_sleep" placeholder="60 seconds">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="uk-fieldset">
+        <div class="uk-form-row">
+          <div class="uk-form-label"></div>
+          <div class="uk-form-controls">
+            <button class="uk-button" type="submit">
+              Save
+            </button>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+  </body>
+</html>
