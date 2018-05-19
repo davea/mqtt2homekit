@@ -1,15 +1,16 @@
-import asyncio
 import random
 import signal
 import time
 import logging
 from functools import partial
 
-from hbmqtt.client import MQTTClient, ClientException, QOS_1
+from paho.mqtt import client as mqtt
 
 from pyhap.accessory import Bridge
 from pyhap.loader import get_serv_loader
 from pyhap.accessory_driver import AccessoryDriver
+
+from urllib.parse import urlparse
 
 from accessory import Accessory
 from encoder import BridgeEncoder
@@ -26,7 +27,7 @@ ONE_DAY = ONE_HOUR * 24
 class MQTTBridge(Bridge):
     def __init__(self, *args, **kwargs):
         self.persist_file = kwargs.pop('persist_file')
-        self.mqtt_server = kwargs.pop('mqtt_server')
+        self.mqtt_server = urlparse(kwargs.pop('mqtt_server'))
         self.port = random.randint(50000, 60000)
         self._driver = None
         super().__init__(*args, **kwargs)
@@ -89,62 +90,72 @@ class MQTTBridge(Bridge):
         self.accessories.pop(aid)
         self.config_changed()
 
-    @asyncio.coroutine
-    def start_mqtt_client(self):
-        try:
-            self.client = MQTTClient()
-            yield from self.client.connect(self.mqtt_server)
-            yield from self.client.subscribe([('HomeKit/+/+/+', QOS_1)])
-            while True:
-                message = yield from self.client.deliver_message()
-                self.handle_mqtt_message(message)
-        except ClientException as ce:
-            LOGGER.error('Client exception: %s' % ce)
-        finally:
-            # disconnect() when not connected is explicitly ignored.
-            yield from self.client.disconnect()
+    @property
+    def driver(self):
+        if not self._driver:
+            self._driver = AccessoryDriver(
+                self,
+                port=self.port,
+                persist_file=self.persist_file,
+                encoder=BridgeEncoder()
+            )
+            signal.signal(signal.SIGINT, self._driver.signal_handler)
+            signal.signal(signal.SIGTERM, self._driver.signal_handler)
+        return self._driver
 
     def start(self):
         """
         Create, and start, a driver for this accessory.
         """
-        driver = AccessoryDriver(
-            self,
-            port=self.port,
-            persist_file=self.persist_file,
-            encoder=BridgeEncoder()
-        )
-        signal.signal(signal.SIGINT, driver.signal_handler)
-        signal.signal(signal.SIGTERM, driver.signal_handler)
-        driver.start()
+        self.client = mqtt.Client()
+        # We need to cause the driver to be instantiated, but we can't .start(), because that will block.
+        self.driver
+        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
+        self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
+        self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
+        self.client.loop_start()
+        self.driver.start()
 
     def stop(self):
-        asyncio.get_event_loop().stop()
+        self.client.loop_stop(force=True)
 
     def run(self):
-        self.loop = asyncio.get_event_loop()
-        asyncio.ensure_future(self.start_mqtt_client())
-        self.loop.run_forever()
+        while not self.run_sentinel.wait(ONE_HOUR):
+            self.flag_unseen()
+            self.remove_missing()
 
-    @Bridge.run_at_interval(ONE_HOUR)
-    def remove_missing(self, since=ONE_DAY * 28):
+    def hide_unseen(self):
+        """
+        Any that we haven't seen in the past hour we want to show in HomeKit as "not connected".
+
+        This should only be those that were done with QoS=0?
+        """
         now = time.time()
         for acc in list(self.accessories.values()):
-            if now - acc.__last_seen > since:
+            if now - acc.__last_seen > ONE_HOUR:
+                print("Look like {} has no data".format(acc.accessory_id))
+
+    def remove_missing(self):
+        """
+        Any that we have not seen in 28 days, we want to remove.
+        """
+        now = time.time()
+        for acc in list(self.accessories.values()):
+            if now - acc.__last_seen > ONE_DAY * 28:
                 self.accessories.pop(acc.aid)
                 self.config_changed()
 
-    def handle_mqtt_message(self, message):
+    def handle_mqtt_message(self, client, userdata, message):
         _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
 
-        if not message.data:
+        if not message.payload:
             # Should we only do this if it's the only service?
             # Otherwise we should remove the service, maybe?
             return self.remove_accessory(accessory_id)
 
         try:
             accessory = self.get_or_create_accessory(accessory_id, service_type)
-            value = message.data.decode()
+            value = message.payload.decode('ascii')
             LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
                 accessory_id=accessory_id,
                 service_type=service_type,
@@ -162,7 +173,7 @@ class MQTTBridge(Bridge):
         # to subscribe.
         # Should this be setting persist=True? I feel like that's up to the actual device.
         try:
-            asyncio.run_coroutine_threadsafe(self.client.publish(
+            self.client.publish(
                 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
                     accessory_id=accessory.accessory_id,
                     service=service.display_name,
@@ -170,6 +181,6 @@ class MQTTBridge(Bridge):
                 ),
                 str(value).encode(),
                 qos=2,
-            ), self.loop)
+            )
         except Exception as exc:
             LOGGER.error('Exception sending message: {}'.format(exc.args))

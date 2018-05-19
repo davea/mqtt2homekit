@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 HAP-python = {git = "https://github.com/ikalchev/HAP-python.git", editable = true, ref = "dev"}
-hbmqtt = "*"
+paho-mqtt = "*"
 
 [dev-packages]
 
