@@ -51,9 +51,20 @@ class DictWrapper(object):
 
 
 class Config(object):
+    def __init__(self):
+        if 'password' not in self.MQTT:
+            import uhashlib
+            import urandom
+            self.MQTT['password'] = ubinascii.hexlify(uhashlib.sha256(str(urandom.getrandbits(32))).digest())
+        self.save()
+
     @property
     def MQTT(self):
-        return DictWrapper('mqtt', {'client_id': DEVICE_ID, 'server': DEFAULT_MQTT_SERVER})
+        return DictWrapper('mqtt', {
+            'client_id': DEVICE_ID,
+            'server': DEFAULT_MQTT_SERVER,
+            'user': DEVICE_ID,
+        })
 
     @MQTT.setter
     def MQTT(self, value):
@@ -78,21 +89,32 @@ class Config(object):
         """
         _config['deep_sleep'] = min(max(1, value), MAX_SLEEP_TIME)
 
+    @property
+    def SENSOR(self):
+        return _config.get('sensor')
+
+    @SENSOR.setter
+    def SENSOR(self, value):
+        _config['sensor'] = value
+
+    @property
+    def is_valid(self):
+        # We should have wifi, mqtt and sensor configuration information.
+        return True
+
     def __repr__(self):
         return {
             'mqtt': self.MQTT,
             'wifi': self.WIFI,
-            'deep_sleep': self.DEEP_SLEEP / SLEEP_FACTOR
+            'deep_sleep': self.DEEP_SLEEP / SLEEP_FACTOR,
+            'sensor': self.SENSOR,
         }
 
     def save(self):
         open(CONFIG_FILE, 'w').write(ujson.dumps(_config))
 
     def setup(self):
-        import wifi
         import machine
-        # Start our AP.
-        wifi.start_ap()
         # Serve HTTP.
         # Save config.
         self.save()

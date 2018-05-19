@@ -32,8 +32,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         pass
 
 
-def run():
-    server_address = ('0.0.0.0', 8081)
+def run(port=8081):
+    print('starting server at http://localhost:{}'.format(port))
+    server_address = ('0.0.0.0', port)
     server = HTTPServer(server_address, RequestHandler)
     server.serve_forever()
 
