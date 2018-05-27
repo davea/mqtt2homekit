@@ -1,5 +1,6 @@
 
-.PHONY: deploy/% deploy-ota
+.PHONY: deploy/% deploy-ota firmware/micropython
+
 
 yaota8266.bin: config.h priv.key pub.key
 	cd ../lib/yaota8266; make
@@ -9,10 +10,11 @@ micropython:
 	cd ../lib/micropython ; git submodule update --init
 	cd ../lib/micropython/lib/axtls ; make
 
-firmware/micropython-stock.bin:
+firmware/micropython:
 	rm -rf ../lib/micropython/ports/esp8266/build/frozen_mpy/*
-	cd ../lib/micropython/ports/esp8266/ ; make clean; make ota
-	cp ../lib/micropython/ports/esp8266/build/firmware-ota.bin $@
+	cd ../lib/micropython/ports/esp8266/ ; make clean; make ota; make
+	cp ../lib/micropython/ports/esp8266/build/firmware-ota.bin firmware/micropython-ota.bin
+	cp ../lib/micropython/ports/esp8266/build/firmware-combined.bin firmware/micropython-combined.bin
 
 firmware/%.bin: ../lib/micropython/ports/esp8266/modules/* ../lib/micropython-lib/umqtt-*/mqtt/*.py modules/base/* modules/%/*
 	rm -rf build/$(*F)
@@ -22,8 +24,8 @@ firmware/%.bin: ../lib/micropython/ports/esp8266/modules/* ../lib/micropython-li
 	cp -R modules/$(*F)/* build/$(*F)/
 	cp ../lib/micropython-lib/umqtt.simple/umqtt/simple.py build/$(*F)/umqtt/simple.py
 	cp ../lib/micropython-lib/umqtt.robust/umqtt/robust.py build/$(*F)/umqtt/robust.py
-	cd ../lib/micropython/ports/esp8266/ ; make ota FROZEN_MPY_DIR=$(shell pwd)/build/$(*F)
-	cp ../lib/micropython/ports/esp8266/build/firmware-ota.bin $@
+	cd ../lib/micropython/ports/esp8266/ ; make DEBUG=0 FROZEN_MPY_DIR=$(shell pwd)/build/$(*F)
+	cp ../lib/micropython/ports/esp8266/build/firmware-combined.bin $@
 
 
 deploy-ota: yaota8266.bin
@@ -35,5 +37,9 @@ deploy/sonoff: firmware/sonoff.bin
 	$(MAKE) -f Makefile.deploy FILE=$< FLASH_MODE=dout
 
 deploy/%: firmware/%.bin
-	echo "Writing %(@F) firmware to esp8266"
+	echo "Writing $(@F) firmware to esp8266"
 	$(MAKE) -f Makefile.deploy FILE=$<
+
+ota/%: firmware/%.bin
+	echo "Uploading $(@F) firmware to esp8266"
+	python ota_client.py live-ota $< -a $(HOST)
