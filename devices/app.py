@@ -29,15 +29,18 @@ except ImportError:
 
 # See if we need to apply any updates to the system.
 client.set_callback(update.apply_update)
-client.subscribe('updates/{}'.format(sensor.SENSOR))
+client.subscribe('HomeKit/device/update')
 if client.check_msg():
     # Do we need to do anything to make sure the callback fires before we reset?
     machine.reset()
 
-# If not, then we need to read the sensor data, and send it to the MQTT broker.
-sensor.send(client)
-print('sleeping')
-time.sleep(5)
-print('deep-sleeping')
-esp.deepsleep(config.DEEP_SLEEP)
-time.sleep(5)
+if getattr(sensor, 'ONE_SHOT', True):
+    # If not, then we need to read the sensor data, and send it to the MQTT broker.
+    sensor.send(client)
+    print('sleeping')
+    time.sleep(5)
+    print('deep-sleeping')
+    esp.deepsleep(config.DEEP_SLEEP)
+    time.sleep(5)
+else:
+    sensor.start(client)

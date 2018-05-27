@@ -66,3 +66,5 @@ class BridgeEncoder(object):
             )
             acc.__last_seen = accessory.get('last_seen', time.time())
             bridge.add_accessory(acc)
+            # Mark the accessory as no response, so it will have to trigger it's own update.
+            acc.no_response()

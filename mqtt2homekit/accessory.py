@@ -43,6 +43,16 @@ CATEGORIES = {
     'WindowCovering': const.CATEGORY_WINDOW_COVERING,
 }
 
+# These items should trigger a Not Responding state if we haven't seen them
+# recently - that is, they should be pushing data to us frequently.
+FLAG_UNSEEN = (
+    'AirQualitySensor',
+    'CarbonDioxideSensor',
+    'CarbonMonoxideSensor',
+    'HumiditySensor',
+    'LightSensor',  # ? - Or is this boolean?
+    'TemperatureSensor',
+)
 
 COERCE = {
     'int': int,
@@ -76,6 +86,7 @@ class Accessory(accessory.AsyncAccessory):
             Model='MQTT Bridged {}'.format(services[0]),
         )
         self.add_service(*(loader.get_service(service) for service in services))
+        self._should_flag_unseen = services[0] in FLAG_UNSEEN
 
     def set_information_service(self, **info):
         info_service = loader.get_service('AccessoryInformation')
@@ -92,3 +103,8 @@ class Accessory(accessory.AsyncAccessory):
 
     def _set_services(self):
         pass
+
+    def no_response(self):
+        for service in self.services[1:]:
+            for characteristic in service.characteristics:
+                characteristic.value = None
