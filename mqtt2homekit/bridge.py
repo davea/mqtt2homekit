@@ -60,25 +60,30 @@ class MQTTBridge(Bridge):
         also persisting data to the disk: any other situation should just return
         the relevant accessory.
         """
-        for accessory in self.accessories.values():
-            if accessory_id == accessory.accessory_id:
-                # Does this accessory have this service_type?
-                if not accessory.get_service(service_type):
-                    # We need to add the service, but remove the accessory and then re-add it.
-                    # Otherwise, HomeKit will get all screwed up, and the bridge won't work anymore.
-                    self.accessories.pop(accessory.aid)
-                    accessory.aid = None
-                    accessory.add_service(get_serv_loader().get_service(service_type))
-                    self.add_accessory(accessory)
-                    self.config_changed()
-                return accessory
+        accessory = self.get_accessory(accessory_id)
 
-        # Did not find the accessory: we need to create it.
-        accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
-        accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
-        self.add_accessory(accessory)
-        self.config_changed()
+        if accessory:
+            # Does this accessory have this service_type?
+            if not accessory.get_service(service_type):
+                # We need to add the service, but remove the accessory and then re-add it.
+                # Otherwise, HomeKit will get all screwed up, and the bridge won't work anymore.
+                self.accessories.pop(accessory.aid)
+                accessory.aid = None
+                accessory.add_service(get_serv_loader().get_service(service_type))
+                self.add_accessory(accessory)
+                self.config_changed()
+        else:
+            # Did not find the accessory: we need to create it.
+            accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
+            accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
+            self.add_accessory(accessory)
+            self.config_changed()
         return accessory
+
+    def get_accessory(self, accessory_id):
+        for accessory in self.accessories.values():
+            if accessory.accessory_id == accessory_id:
+                return accessory
 
     def remove_accessory(self, accessory_id):
         for aid, accessory in self.accessories.items():
@@ -120,11 +125,11 @@ class MQTTBridge(Bridge):
         self.client.loop_stop(force=True)
 
     def run(self):
-        while not self.run_sentinel.wait(ONE_HOUR):
+        while not self.run_sentinel.wait(ONE_MINUTE):
             self.flag_unseen()
             self.remove_missing()
 
-    def hide_unseen(self):
+    def flag_unseen(self):
         """
         Any that we haven't seen in the past hour we want to show in HomeKit as "not connected".
 
@@ -132,8 +137,11 @@ class MQTTBridge(Bridge):
         """
         now = time.time()
         for acc in list(self.accessories.values()):
-            if now - acc.__last_seen > ONE_HOUR:
+            if acc.__last_seen and now - acc.__last_seen > ONE_MINUTE * 10:
+                # Set all characteristics we have ever known about to None.
                 print("Look like {} has no data".format(acc.accessory_id))
+                if acc._should_flag_unseen:
+                    acc.no_response()
 
     def remove_missing(self):
         """
@@ -141,7 +149,7 @@ class MQTTBridge(Bridge):
         """
         now = time.time()
         for acc in list(self.accessories.values()):
-            if now - acc.__last_seen > ONE_DAY * 28:
+            if acc.__last_seen and now - acc.__last_seen > ONE_DAY * 28:
                 self.accessories.pop(acc.aid)
                 self.config_changed()
 
@@ -171,7 +179,9 @@ class MQTTBridge(Bridge):
     def send_mqtt_message(self, accessory, service, characteristic, value):
         # We always send messages with QoS 2 - this means clients may choose how they want
         # to subscribe.
-        # Should this be setting persist=True? I feel like that's up to the actual device.
+        # We also assume that data being pushed from HomeKit should "persist" (retain=True),
+        # because the user has set a state. Devices that can be controlled out of band of
+        # HomeKit should also set retain=True on their messages.
         try:
             self.client.publish(
                 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
@@ -181,6 +191,7 @@ class MQTTBridge(Bridge):
                 ),
                 str(value).encode(),
                 qos=2,
+                retain=True,
             )
         except Exception as exc:
             LOGGER.error('Exception sending message: {}'.format(exc.args))
