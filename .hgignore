@@ -1,5 +1,10 @@
 syntax: glob
 
 *.state
-libs
-lib
+
+lib/
+ota/firmware/
+ota/build/
+ota/*.key
+ota/config.h
+ota/yaota8266.bin
