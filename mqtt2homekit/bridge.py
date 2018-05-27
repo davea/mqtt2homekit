@@ -183,6 +183,7 @@ class MQTTBridge(Bridge):
         # because the user has set a state. Devices that can be controlled out of band of
         # HomeKit should also set retain=True on their messages.
         try:
+            characteristic.set_value(value)
             self.client.publish(
                 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
                     accessory_id=accessory.accessory_id,
