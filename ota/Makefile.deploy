@@ -1,7 +1,7 @@
-BAUD ?= 115200
+BAUD ?= 460800
 FLASH_MODE ?= qio
 START ?= 0x3c000
 
 deploy:
 	echo "Writing firmware to esp8266"
-	echo esptool.py --port $(PORT) --baud $(BAUD) write_flash --flash_mode $(FLASH_MODE) $(START) $(FILE)
+	esptool.py --port $(PORT) --baud $(BAUD) write_flash --flash_mode $(FLASH_MODE) --flash_size detect $(START) $(FILE)
