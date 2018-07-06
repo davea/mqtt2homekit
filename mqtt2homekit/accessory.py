@@ -87,6 +87,7 @@ class Accessory(accessory.AsyncAccessory):
         )
         self.add_service(*(loader.get_service(service) for service in services))
         self._should_flag_unseen = services[0] in FLAG_UNSEEN
+        self.__last_seen = None
 
     def set_information_service(self, **info):
         info_service = loader.get_service('AccessoryInformation')
