@@ -123,6 +123,8 @@ class MQTTBridge(Bridge):
 
     def stop(self):
         self.client.loop_stop(force=True)
+        # Make sure we write our current data.
+        self.driver.persist()
 
     def run(self):
         while not self.run_sentinel.wait(ONE_MINUTE):
@@ -137,9 +139,9 @@ class MQTTBridge(Bridge):
         """
         now = time.time()
         for acc in list(self.accessories.values()):
-            if acc.__last_seen and now - acc.__last_seen > ONE_MINUTE * 10:
+            if acc._last_seen and now - acc._last_seen > ONE_HOUR:
                 # Set all characteristics we have ever known about to None.
-                print("Look like {} has no data".format(acc.accessory_id))
+                print("Look like {} has no data for {} seconds".format(acc.accessory_id, now - acc._last_seen))
                 if acc._should_flag_unseen:
                     acc.no_response()
 
@@ -149,7 +151,7 @@ class MQTTBridge(Bridge):
         """
         now = time.time()
         for acc in list(self.accessories.values()):
-            if acc.__last_seen and now - acc.__last_seen > ONE_DAY * 28:
+            if acc._last_seen and now - acc._last_seen > ONE_DAY * 28:
                 self.accessories.pop(acc.aid)
                 self.config_changed()
 
@@ -163,6 +165,7 @@ class MQTTBridge(Bridge):
 
         try:
             accessory = self.get_or_create_accessory(accessory_id, service_type)
+            accessory._last_seen = time.time()
             value = message.payload.decode('ascii')
             LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
                 accessory_id=accessory_id,
@@ -172,7 +175,6 @@ class MQTTBridge(Bridge):
             ))
             # If we have an empty message, then perhaps we need to do nothing...?
             accessory.set_characteristic(service_type, characteristic, value)
-            accessory.__last_seen = time.time()
         except Exception as exc:
             LOGGER.error('Exception handling message {}'.format(exc.args))
 
