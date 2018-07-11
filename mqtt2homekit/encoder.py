@@ -39,7 +39,7 @@ class BridgeEncoder(object):
                         if service.display_name != 'AccessoryInformation'
                     ],
                     "aid": accessory.aid,
-                    "last_seen": getattr(accessory, '__last_seen', time.time()),
+                    "last_seen": getattr(accessory, '_last_seen', time.time()),
                 }
                 for aid, accessory in bridge.accessories.items() if aid != 1
             ]
@@ -64,7 +64,7 @@ class BridgeEncoder(object):
                 services=accessory['services'],
                 accessory_id=accessory['accessory_id'],
             )
-            acc.__last_seen = accessory.get('last_seen', time.time())
+            acc._last_seen = accessory.get('last_seen', time.time())
             bridge.add_accessory(acc)
             # Mark the accessory as no response, so it will have to trigger it's own update.
             acc.no_response()
