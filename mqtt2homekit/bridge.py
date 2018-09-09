@@ -3,11 +3,12 @@ import signal
 import time
 import logging
 from functools import partial
+from pathlib import Path
 
 from paho.mqtt import client as mqtt
 
 from pyhap.accessory import Bridge
-from pyhap.loader import get_serv_loader
+from pyhap.loader import get_loader
 from pyhap.accessory_driver import AccessoryDriver
 
 from urllib.parse import urlparse
@@ -24,20 +25,35 @@ ONE_HOUR = ONE_MINUTE * 60
 ONE_DAY = ONE_HOUR * 24
 
 
+def build_driver(bridge, port, persist_file):
+    driver = AccessoryDriver(
+        port=port,
+        persist_file=persist_file,
+        encoder=BridgeEncoder(bridge)
+    )
+    driver.accessory = bridge
+    signal.signal(signal.SIGINT, driver.signal_handler)
+    signal.signal(signal.SIGTERM, driver.signal_handler)
+    return driver
+
+
 class MQTTBridge(Bridge):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, display_name, **kwargs):
         self.persist_file = kwargs.pop('persist_file')
         self.mqtt_server = urlparse(kwargs.pop('mqtt_server'))
         self.port = random.randint(50000, 60000)
-        self._driver = None
-        super().__init__(*args, **kwargs)
+        driver = build_driver(self, self.port, self.persist_file)
+        super().__init__(driver, display_name, **kwargs)
+        if Path(self.persist_file).exists():
+            self.driver.load()
 
-    def _set_services(self):
-        info_service = get_serv_loader().get_service("AccessoryInformation")
-        info_service.get_characteristic("Name").set_value('MQTT Bridge', False)
-        info_service.get_characteristic("Manufacturer").set_value("Matthew Schinckel", False)
-        info_service.get_characteristic("Model").set_value("Bridge", False)
-        info_service.get_characteristic("SerialNumber").set_value("0001", False)
+    def add_info_service(self):
+        info_service = get_loader().get_service("AccessoryInformation")
+        info_service.configure_char("Name", value='MQTT Bridge')
+        info_service.configure_char("Manufacturer", value="Matthew Schinckel")
+        info_service.configure_char("Model", value="Bridge")
+        info_service.configure_char("SerialNumber", value="02b26429-cb8b-47cd-a27a-2feb33996cde")
+        info_service.configure_char("FirmwareRevision", value="1")
         self.add_service(info_service)
 
     def add_accessory(self, accessory):
@@ -69,15 +85,19 @@ class MQTTBridge(Bridge):
                 # Otherwise, HomeKit will get all screwed up, and the bridge won't work anymore.
                 self.accessories.pop(accessory.aid)
                 accessory.aid = None
-                accessory.add_service(get_serv_loader().get_service(service_type))
+                accessory.add_service(get_loader().get_service(service_type))
                 self.add_accessory(accessory)
-                self.config_changed()
+                self.driver.config_changed()
         else:
             # Did not find the accessory: we need to create it.
-            accessory = Accessory(display_name(service_type), services=[service_type], accessory_id=accessory_id)
-            accessory.set_sentinel(self.run_sentinel, self.aio_stop_event, self.event_loop)
+            accessory = Accessory(
+                self.driver,
+                display_name(service_type),
+                services=[service_type],
+                accessory_id=accessory_id,
+            )
             self.add_accessory(accessory)
-            self.config_changed()
+            self.driver.config_changed()
         return accessory
 
     def get_accessory(self, accessory_id):
@@ -93,28 +113,13 @@ class MQTTBridge(Bridge):
             return
 
         self.accessories.pop(aid)
-        self.config_changed()
-
-    @property
-    def driver(self):
-        if not self._driver:
-            self._driver = AccessoryDriver(
-                self,
-                port=self.port,
-                persist_file=self.persist_file,
-                encoder=BridgeEncoder()
-            )
-            signal.signal(signal.SIGINT, self._driver.signal_handler)
-            signal.signal(signal.SIGTERM, self._driver.signal_handler)
-        return self._driver
+        self.driver.config_changed()
 
     def start(self):
         """
         Create, and start, a driver for this accessory.
         """
         self.client = mqtt.Client()
-        # We need to cause the driver to be instantiated, but we can't .start(), because that will block.
-        self.driver
         self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
         self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
         self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
@@ -126,10 +131,10 @@ class MQTTBridge(Bridge):
         # Make sure we write our current data.
         self.driver.persist()
 
+    @Accessory.run_at_interval(ONE_MINUTE)
     def run(self):
-        while not self.run_sentinel.wait(ONE_MINUTE):
-            self.flag_unseen()
-            self.remove_missing()
+        self.flag_unseen()
+        self.remove_missing()
 
     def flag_unseen(self):
         """
@@ -150,10 +155,13 @@ class MQTTBridge(Bridge):
         Any that we have not seen in 28 days, we want to remove.
         """
         now = time.time()
+        changed = False
         for acc in list(self.accessories.values()):
             if acc._last_seen and now - acc._last_seen > ONE_DAY * 28:
                 self.accessories.pop(acc.aid)
-                self.config_changed()
+                changed = True
+        if changed:
+            self.driver.config_changed()
 
     def handle_mqtt_message(self, client, userdata, message):
         _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
@@ -162,7 +170,6 @@ class MQTTBridge(Bridge):
             # Should we only do this if it's the only service?
             # Otherwise we should remove the service, maybe?
             return self.remove_accessory(accessory_id)
-
         try:
             accessory = self.get_or_create_accessory(accessory_id, service_type)
             accessory._last_seen = time.time()
@@ -176,7 +183,7 @@ class MQTTBridge(Bridge):
             # If we have an empty message, then perhaps we need to do nothing...?
             accessory.set_characteristic(service_type, characteristic, value)
         except Exception as exc:
-            LOGGER.error('Exception handling message {}'.format(exc.args))
+            LOGGER.error('Exception handling message {}: {}'.format(exc.__class__.__name__, exc.args))
 
     def send_mqtt_message(self, accessory, service, characteristic, value):
         # We always send messages with QoS 2 - this means clients may choose how they want
