@@ -1,5 +1,5 @@
 from pyhap import accessory, const
-from pyhap.loader import get_serv_loader
+from pyhap.loader import get_loader
 
 
 CATEGORIES = {
@@ -64,7 +64,7 @@ COERCE = {
     'bool': int
 }
 
-loader = get_serv_loader()
+loader = get_loader()
 
 
 def clean_value(characteristic, value):
@@ -73,26 +73,23 @@ def clean_value(characteristic, value):
     return value
 
 
-class Accessory(accessory.AsyncAccessory):
+class Accessory(accessory.Accessory):
     def __init__(self, *args, **kwargs):
         services = kwargs.pop('services')
         self.accessory_id = kwargs.pop('accessory_id')
         self.category = CATEGORIES.get(services[0], const.CATEGORY_OTHER)
+        self._model = 'MQTT Bridged {}'.format(services[0])
         super().__init__(*args, **kwargs)
-        self.set_information_service(
-            Name=self.display_name,
-            SerialNumber=self.accessory_id,
-            Manufacturer='Matthew Schinckel',
-            Model='MQTT Bridged {}'.format(services[0]),
-        )
         self.add_service(*(loader.get_service(service) for service in services))
         self._should_flag_unseen = services[0] in FLAG_UNSEEN
         self._last_seen = None
 
-    def set_information_service(self, **info):
+    def add_info_service(self, **info):
         info_service = loader.get_service('AccessoryInformation')
-        for key in ['Name', 'Manufacturer', 'Model', 'SerialNumber']:
-            info_service.get_characteristic(key).set_value(info.get(key, ''))
+        info_service.configure_char('Name', value=self.display_name)
+        info_service.configure_char('SerialNumber', value=self.accessory_id)
+        info_service.configure_char('Manufacturer', value='Matthew Schinckel')
+        info_service.configure_char('Model', value=self._model)
         self.add_service(info_service)
 
     def set_characteristic(self, service_type, characteristic_name, value):
@@ -108,4 +105,4 @@ class Accessory(accessory.AsyncAccessory):
     def no_response(self):
         for service in self.services[1:]:
             for characteristic in service.characteristics:
-                characteristic.value = None
+                characteristic.value = ''
