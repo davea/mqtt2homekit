@@ -1,10 +1,13 @@
 import json
+import logging
 import time
 from io import StringIO
 
 from pyhap.encoder import AccessoryEncoder
 
 from accessory import Accessory
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BridgeEncoder(AccessoryEncoder):
@@ -34,12 +37,12 @@ class BridgeEncoder(AccessoryEncoder):
             }
             for aid, accessory in bridge.accessories.items() if aid != 1
         ]
-        return json.dump(state, fp)
+        return json.dump(state, fp, indent=2)
 
     def load_into(self, fp, state):
         bridge = self.bridge
         super().load_into(fp, state)
-        return
+
         fp.seek(0)
         loaded = json.load(fp)
 
@@ -54,4 +57,4 @@ class BridgeEncoder(AccessoryEncoder):
             acc._last_seen = accessory.get('last_seen', time.time())
             bridge.add_accessory(acc)
             # Mark the accessory as no response, so it will have to trigger it's own update.
-            acc.no_response()
+            # acc.no_response()
