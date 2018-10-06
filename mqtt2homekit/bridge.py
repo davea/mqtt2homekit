@@ -3,7 +3,6 @@ import signal
 import time
 import logging
 from functools import partial
-from pathlib import Path
 
 from paho.mqtt import client as mqtt
 
@@ -31,7 +30,6 @@ def build_driver(bridge, port, persist_file):
         persist_file=persist_file,
         encoder=BridgeEncoder(bridge)
     )
-    driver.accessory = bridge
     signal.signal(signal.SIGINT, driver.signal_handler)
     signal.signal(signal.SIGTERM, driver.signal_handler)
     return driver
@@ -43,9 +41,11 @@ class MQTTBridge(Bridge):
         self.mqtt_server = urlparse(kwargs.pop('mqtt_server'))
         self.port = random.randint(50000, 60000)
         driver = build_driver(self, self.port, self.persist_file)
+        # This sets self.driver
         super().__init__(driver, display_name, **kwargs)
-        if Path(self.persist_file).exists():
-            self.driver.load()
+        driver.add_accessory(accessory=self)
+        # if Path(self.persist_file).exists():
+        #     driver.load()
 
     def add_info_service(self):
         info_service = get_loader().get_service("AccessoryInformation")
@@ -62,8 +62,19 @@ class MQTTBridge(Bridge):
         # something needs to change.
         super().add_accessory(accessory)
         for service in accessory.services:
+            if service.display_name == 'AccessoryInformation':
+                continue
+
             for characteristic in service.characteristics:
+                LOGGER.debug('Set setter_callback for {accessory}: {service}.{characteristic}'.format(
+                    accessory=accessory,
+                    service=service,
+                    characteristic=characteristic,
+                ))
                 characteristic.setter_callback = partial(self.send_mqtt_message, accessory, service, characteristic)
+
+    def config_changed(self):
+        self.driver.config_changed()
 
     def get_or_create_accessory(self, accessory_id, service_type):
         """
@@ -87,7 +98,7 @@ class MQTTBridge(Bridge):
                 accessory.aid = None
                 accessory.add_service(get_loader().get_service(service_type))
                 self.add_accessory(accessory)
-                self.driver.config_changed()
+                self.config_changed()
         else:
             # Did not find the accessory: we need to create it.
             accessory = Accessory(
@@ -97,7 +108,7 @@ class MQTTBridge(Bridge):
                 accessory_id=accessory_id,
             )
             self.add_accessory(accessory)
-            self.driver.config_changed()
+            self.config_changed()
         return accessory
 
     def get_accessory(self, accessory_id):
@@ -113,9 +124,9 @@ class MQTTBridge(Bridge):
             return
 
         self.accessories.pop(aid)
-        self.driver.config_changed()
+        self.config_changed()
 
-    def start(self):
+    async def run(self):
         """
         Create, and start, a driver for this accessory.
         """
@@ -124,15 +135,16 @@ class MQTTBridge(Bridge):
         self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
         self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
         self.client.loop_start()
-        self.driver.start()
+        await super().run()
 
-    def stop(self):
+    async def stop(self):
+        await super().stop()
         self.client.loop_stop(force=True)
         # Make sure we write our current data.
         self.driver.persist()
 
     @Accessory.run_at_interval(ONE_MINUTE)
-    def run(self):
+    def check_missing(self):
         self.flag_unseen()
         self.remove_missing()
 
@@ -146,7 +158,10 @@ class MQTTBridge(Bridge):
         for acc in list(self.accessories.values()):
             if acc._last_seen and now - acc._last_seen > ONE_HOUR:
                 # Set all characteristics we have ever known about to None.
-                print("Look like {} has no data for {} seconds".format(acc.accessory_id, now - acc._last_seen))
+                LOGGER.info("Look like {accessory_id} has no data for {interval} seconds".format(
+                    accessory_id=acc.accessory_id,
+                    interval=now - acc._last_seen,
+                ))
                 if acc._should_flag_unseen:
                     acc.no_response()
 
@@ -161,20 +176,28 @@ class MQTTBridge(Bridge):
                 self.accessories.pop(acc.aid)
                 changed = True
         if changed:
-            self.driver.config_changed()
+            self.config_changed()
 
     def handle_mqtt_message(self, client, userdata, message):
         _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
 
+        if service_type == 'AccessoryInformation':
+            return
+
         if not message.payload:
             # Should we only do this if it's the only service?
             # Otherwise we should remove the service, maybe?
+            LOGGER.info('REMOVE {accessory_id}: {service_type}.{characteristic}'.format(
+                accessory_id=accessory_id,
+                service_type=service_type,
+                characteristic=characteristic,
+            ))
             return self.remove_accessory(accessory_id)
         try:
             accessory = self.get_or_create_accessory(accessory_id, service_type)
             accessory._last_seen = time.time()
             value = message.payload.decode('ascii')
-            LOGGER.debug('SET {accessory_id} {service_type} {characteristic} -> {value}'.format(
+            LOGGER.debug('SET {accessory_id}: {service_type}.{characteristic} -> {value}'.format(
                 accessory_id=accessory_id,
                 service_type=service_type,
                 characteristic=characteristic,
@@ -191,14 +214,32 @@ class MQTTBridge(Bridge):
         # We also assume that data being pushed from HomeKit should "persist" (retain=True),
         # because the user has set a state. Devices that can be controlled out of band of
         # HomeKit should also set retain=True on their messages.
+        if service == 'AccessoryInformation':
+            LOGGER.info(
+                'Received AccessoryInformation message: {accessory}: {service}.{characteristic} -> {value}'.format(
+                    accessory=accessory,
+                    service=service,
+                    characteristic=characteristic,
+                    value=value,
+                )
+            )
+            return
+
+        if characteristic.display_name == 'Identify':
+            LOGGER.info('Identify: {accessory_id}'.format(accessory_id=accessory))
+            return
+
         try:
             characteristic.set_value(value)
+            topic = 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
+                accessory_id=accessory.accessory_id,
+                service=service.display_name,
+                characteristic=characteristic,
+            )
+            LOGGER.debug(topic)
+
             self.client.publish(
-                'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
-                    accessory_id=accessory.accessory_id,
-                    service=service.display_name,
-                    characteristic=characteristic,
-                ),
+                topic,
                 str(value).encode(),
                 qos=2,
                 retain=True,

@@ -1,6 +1,9 @@
+import logging
+
 from pyhap import accessory, const
 from pyhap.loader import get_loader
 
+LOGGER = logging.getLogger(__name__)
 
 CATEGORIES = {
     'AirPurifier': const.CATEGORY_OTHER,
@@ -90,6 +93,7 @@ class Accessory(accessory.Accessory):
         info_service.configure_char('SerialNumber', value=self.accessory_id)
         info_service.configure_char('Manufacturer', value='Matthew Schinckel')
         info_service.configure_char('Model', value=self._model)
+        info_service.configure_char('FirmwareRevision', value="1")
         self.add_service(info_service)
 
     def set_characteristic(self, service_type, characteristic_name, value):
@@ -99,10 +103,8 @@ class Accessory(accessory.Accessory):
         characteristic.set_value(value)
         characteristic.notify()
 
-    def _set_services(self):
-        pass
-
     def no_response(self):
+        LOGGER.debug('Marking {accessory} as Not Responding'.format(self))
         for service in self.services[1:]:
             for characteristic in service.characteristics:
                 characteristic.value = ''

@@ -5,10 +5,11 @@ name = "pypi"
 
 [packages]
 HAP-python = "*"
+"HAP-python[QRCode]" = "*"
 paho-mqtt = "*"
 
 [dev-packages]
 jupyter-micropython-remote = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
