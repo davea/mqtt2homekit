@@ -9,7 +9,6 @@ HAP-python = "*"
 paho-mqtt = "*"
 
 [dev-packages]
-jupyter-micropython-remote = "*"
 
 [requires]
 python_version = "3.7"
