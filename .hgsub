@@ -1,3 +1,0 @@
-lib/micropython=[git]https://github.com/micropython/micropython.git
-lib/yaota8266=[git]https://github.com/schinckel/yaota8266.git
-lib/micropython-lib=[git]https://github.com/micropython/micropython-lib.git
