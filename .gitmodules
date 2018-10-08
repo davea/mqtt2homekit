@@ -6,5 +6,5 @@
 	url = https://github.com/micropython/micropython.git
 [submodule "lib/yaota8266"]
 	path = lib/yaota8266
-	url = git@github.com:schinckel/yaota8266.git
+	url = https://github.com/schinckel/yaota8266.git
 
