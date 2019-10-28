@@ -1,0 +1,22 @@
+{
+  "Voltage": {
+    "Format": "float",
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F10A-079E-48FF-8F27-9C2605A29F52"
+  },
+  "Power": {
+    "Format": "float",
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F10D-079E-48FF-8F27-9C2605A29F52"
+  },
+  "Energy": {
+    "Format": "float",
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F10C-079E-48FF-8F27-9C2605A29F52"
+  },
+  "Current": {
+    "Format": "float",
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F126-079E-48FF-8F27-9C2605A29F52"
+  }
+}

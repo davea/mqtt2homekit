@@ -1,0 +1,13 @@
+{
+  "Inverter": {
+    "OptionalCharacteristics": [],
+    "RequiredCharacteristics": [
+      "Active",
+      "Power",
+      "Energy",
+      "Voltage",
+      "Current"
+    ],
+    "UUID": "971bd6f2-eb80-4a61-9eb1-43d6de3722c0"
+  }
+}
