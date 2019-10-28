@@ -6,6 +6,7 @@ from io import StringIO
 from pyhap.encoder import AccessoryEncoder
 
 from accessory import Accessory
+from loader import loader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +35,15 @@ class BridgeEncoder(AccessoryEncoder):
                 ],
                 "aid": accessory.aid,
                 "last_seen": getattr(accessory, '_last_seen', time.time()),
+                "optional_characteristics": {
+                    service.display_name: [
+                        characteristic.display_name
+                        for characteristic in service.characteristics
+                        if characteristic.display_name not in loader.get_service(service.display_name)
+                    ]
+                    for service in accessory.services
+                    if service.display_name != 'AccessoryInformation'
+                }
             }
             for aid, accessory in bridge.accessories.items() if aid != 1
         ]
@@ -53,6 +63,7 @@ class BridgeEncoder(AccessoryEncoder):
                 aid=accessory['aid'],
                 services=accessory['services'],
                 accessory_id=accessory['accessory_id'],
+                optional_characteristics=accessory.get('optional_characteristics', {})
             )
             acc._last_seen = accessory.get('last_seen', time.time())
             bridge.add_accessory(acc)
