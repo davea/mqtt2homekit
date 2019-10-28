@@ -39,7 +39,10 @@ class BridgeEncoder(AccessoryEncoder):
                     service.display_name: [
                         characteristic.display_name
                         for characteristic in service.characteristics
-                        if characteristic.display_name not in loader.get_service(service.display_name)
+                        if characteristic.display_name not in [
+                            char.display_name
+                            for char in loader.get_service(service.display_name).characteristics
+                        ]
                     ]
                     for service in accessory.services
                     if service.display_name != 'AccessoryInformation'
