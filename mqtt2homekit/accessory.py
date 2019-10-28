@@ -81,10 +81,14 @@ class Accessory(accessory.Accessory):
         self.accessory_id = kwargs.pop('accessory_id')
         self.category = CATEGORIES.get(services[0], const.CATEGORY_OTHER)
         self._model = 'MQTT Bridged {}'.format(services[0])
+        optional_characteristics = kwargs.pop('optional_characteristics', {})
         super().__init__(*args, **kwargs)
         self.add_service(*(loader.get_service(service) for service in services))
         self._should_flag_unseen = services[0] in FLAG_UNSEEN
         self._last_seen = None
+        for service, characteristics in optional_characteristics.items():
+            for characteristic in characteristics:
+                self.get_service(service).add_characteristic(loader.get_char(characteristic))
 
     def add_info_service(self, **info):
         info_service = loader.get_service('AccessoryInformation')
