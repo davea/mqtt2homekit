@@ -25,7 +25,9 @@
         },
         "curve25519-donna": {
             "hashes": [
-                "sha256:1818a9d5356a05c022cd504f44fe1d2f641a5c020f8a4c51b2294e02bd9c1bf0"
+                "sha256:037146227ac87ddcd7e1b3b4576251eb9efbde7fdd8f565560e540bf904bc475",
+                "sha256:1818a9d5356a05c022cd504f44fe1d2f641a5c020f8a4c51b2294e02bd9c1bf0",
+                "sha256:9846d9127552653214b714655d4e633d2fb8e2ea65626c69a98ddee96876eded"
             ],
             "version": "==1.3"
         },
@@ -38,7 +40,9 @@
         },
         "ed25519": {
             "hashes": [
-                "sha256:2991b94e1883d1313c956a1e3ced27b8a2fdae23ac40c0d9d0b103d5a70d1d2a"
+                "sha256:2991b94e1883d1313c956a1e3ced27b8a2fdae23ac40c0d9d0b103d5a70d1d2a",
+                "sha256:7ca132379ce000fa234bcc70048a693d94fab4836b31267449739237a2e26ee9",
+                "sha256:e2e89a9056d3858303f45a38b6d46d5e534601158397942bf891443769ea6235"
             ],
             "version": "==1.4"
         },
@@ -55,12 +59,15 @@
         },
         "ifaddr": {
             "hashes": [
+                "sha256:7b7cdd35f4271271f7c06cdf286a6b5aabc74b85a475dc3d4b4351a0d89115e0",
+                "sha256:cf2a8fbb578da2844d999a0a453825f660ed2d3fc47dcffc5f673dd8de4f0f8b"
                 "sha256:c19c64882a7ad51a394451dabcbbed72e98b5625ec1e79789924d5ea3e3ecb93"
             ],
             "version": "==0.1.6"
         },
         "paho-mqtt": {
             "hashes": [
+                "sha256:26ab2733790ed045704f0e81d999fc253c80133cb3dd3af8b9bd0e9cb7316c9f",
                 "sha256:e440a052b46d222e184be3be38676378722072fcd4dfd2c8f509fb861a7b0b79"
             ],
             "index": "pypi",
@@ -102,13 +109,15 @@
         "pyqrcode": {
             "hashes": [
                 "sha256:1b2812775fa6ff5c527977c4cd2ccb07051ca7d0bc0aecf937a43864abe5eff6",
+                "sha256:d7128a5c69432addc6b035016ee6692a0684988be6a70f48c325c47115a0022d",
                 "sha256:fdbf7634733e56b72e27f9bce46e4550b75a3a2c420414035cae9d9d26b234d5"
             ],
             "version": "==1.2.1"
         },
         "tlslite-ng": {
             "hashes": [
-                "sha256:823bc35c89c336635751852b2a26ffed3b1258e1a5827279074b7dbf409187ab"
+                "sha256:823bc35c89c336635751852b2a26ffed3b1258e1a5827279074b7dbf409187ab",
+                "sha256:d1f0914ddaf79648a3e7956ca33b0e4fa25bbf50402e877486c14f5a2408694a"
             ],
             "version": "==0.7.5"
         },
