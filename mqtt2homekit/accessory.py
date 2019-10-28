@@ -2,7 +2,7 @@ import logging
 
 from pyhap import accessory, const
 
-from .loader import loader
+from loader import loader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,7 +88,10 @@ class Accessory(accessory.Accessory):
         self._last_seen = None
         for service, characteristics in optional_characteristics.items():
             for characteristic in characteristics:
-                self.get_service(service).add_characteristic(loader.get_char(characteristic))
+                char = loader.get_char(characteristic)
+                self.iid_manager.assign(char)
+                char.broker = self
+                self.get_service(service).add_characteristic(char)
 
     def add_info_service(self, **info):
         info_service = loader.get_service('AccessoryInformation')
