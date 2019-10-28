@@ -115,4 +115,3 @@ class Accessory(accessory.Accessory):
         for service in self.services[1:]:
             for characteristic in service.characteristics:
                 characteristic.value = ''
-
