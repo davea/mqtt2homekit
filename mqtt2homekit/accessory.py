@@ -1,7 +1,8 @@
 import logging
 
 from pyhap import accessory, const
-from pyhap.loader import get_loader
+
+from loader import loader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,10 +65,8 @@ COERCE = {
     'uint16': int,
     'uint32': int,
     'uint64': int,
-    'bool': int
+    'bool': lambda value: value in [True, 'true', 'True', 1, '1'],
 }
-
-loader = get_loader()
 
 
 def clean_value(characteristic, value):
@@ -98,7 +97,15 @@ class Accessory(accessory.Accessory):
 
     def set_characteristic(self, service_type, characteristic_name, value):
         service = self.get_service(service_type)
-        characteristic = service.get_characteristic(characteristic_name)
+        try:
+            characteristic = service.get_characteristic(characteristic_name)
+        except ValueError:
+            characteristic = loader.get_char(characteristic_name)
+            if not characteristic:
+                raise
+            self.iid_manager.assign(characteristic)
+            characteristic.broker = self
+            service.add_characteristic(characteristic)
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
         characteristic.notify()
@@ -108,3 +115,4 @@ class Accessory(accessory.Accessory):
         for service in self.services[1:]:
             for characteristic in service.characteristics:
                 characteristic.value = ''
+
