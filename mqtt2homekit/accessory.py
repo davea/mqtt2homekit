@@ -2,7 +2,7 @@ import logging
 
 from pyhap import accessory, const
 
-from loader import loader
+from pyhap.loader import get_loader
 
 LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +77,7 @@ def clean_value(characteristic, value):
 
 class Accessory(accessory.Accessory):
     def __init__(self, *args, **kwargs):
+        loader = get_loader()
         services = kwargs.pop('services')
         self.accessory_id = kwargs.pop('accessory_id')
         self.category = CATEGORIES.get(services[0], const.CATEGORY_OTHER)
@@ -87,7 +88,7 @@ class Accessory(accessory.Accessory):
         self._last_seen = None
 
     def add_info_service(self, **info):
-        info_service = loader.get_service('AccessoryInformation')
+        info_service = get_loader().get_service('AccessoryInformation')
         info_service.configure_char('Name', value=self.display_name)
         info_service.configure_char('SerialNumber', value=self.accessory_id)
         info_service.configure_char('Manufacturer', value='Matthew Schinckel')
@@ -100,7 +101,7 @@ class Accessory(accessory.Accessory):
         try:
             characteristic = service.get_characteristic(characteristic_name)
         except ValueError:
-            characteristic = loader.get_char(characteristic_name)
+            characteristic = get_loader().get_char(characteristic_name)
             if not characteristic:
                 raise
             self.iid_manager.assign(characteristic)
