@@ -2,7 +2,7 @@ import logging
 
 from pyhap import accessory, const
 
-from loader import loader
+from .loader import loader
 
 LOGGER = logging.getLogger(__name__)
 
