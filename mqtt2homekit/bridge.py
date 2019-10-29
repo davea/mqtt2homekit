@@ -238,6 +238,9 @@ class MQTTBridge(Bridge):
             )
             LOGGER.debug(topic)
 
+            if value in (True, False):
+                value = int(value)
+
             self.client.publish(
                 topic,
                 str(value).encode(),
