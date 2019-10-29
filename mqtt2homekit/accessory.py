@@ -65,7 +65,7 @@ COERCE = {
     'uint16': int,
     'uint32': int,
     'uint64': int,
-    'bool': lambda value: value in [True, 'true', 'True', 1, '1'],
+    'bool': lambda value: int(value in [True, 'true', 'True', 1, '1']),
 }
 
 
