@@ -16,7 +16,9 @@ def test_clean_value_Brightness():
     assert clean_value(char, 100) == 100
 
 
-def test_Accesssory_new_char():
+def test_Accesssory_new_char(mocker):
+    mocker.patch('pyhap.hap_server.HAPServer.server_close')
+    mocker.patch('pyhap.hap_server.HAPServer.server_bind')
     acc = Accessory(
         display_name='Lightbulb One',
         accessory_id='6f863a11-5d20-4034-b4e7-1200c8e6a183',
@@ -26,7 +28,9 @@ def test_Accesssory_new_char():
     acc.set_characteristic('Lightbulb', 'Brightness', '75')
 
 
-def test_Accessory_no_response():
+def test_Accessory_no_response(mocker):
+    mocker.patch('pyhap.hap_server.HAPServer.server_close')
+    mocker.patch('pyhap.hap_server.HAPServer.server_bind')
     acc = Accessory(
         display_name='Lightbulb One',
         accessory_id='4bf907bb-e52c-4b78-8efe-b7e0b050327c',
