@@ -8,6 +8,13 @@ def test_clean_value_On():
     char = loader.get_char('On')
     assert clean_value(char, '0') == 0
     assert clean_value(char, '1') == 1
+    assert clean_value(char, 'False') == 0
+    assert clean_value(char, 'True') == 1
+
+
+def test_clean_value_string():
+    char = loader.get_char('ConfiguredName')
+    assert clean_value(char, 'Foo Bar') == 'Foo Bar'
 
 
 def test_clean_value_Brightness():
