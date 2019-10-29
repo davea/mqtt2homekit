@@ -12,9 +12,9 @@ from pyhap.accessory_driver import AccessoryDriver
 
 from urllib.parse import urlparse
 
-from accessory import Accessory
-from encoder import BridgeEncoder
-from utils import display_name
+from .accessory import Accessory
+from .encoder import BridgeEncoder
+from .utils import display_name
 
 
 LOGGER = logging.getLogger(__name__)

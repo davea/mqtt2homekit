@@ -5,8 +5,8 @@ from io import StringIO
 
 from pyhap.encoder import AccessoryEncoder
 
-from accessory import Accessory
-from loader import loader
+from .accessory import Accessory
+from .loader import loader
 
 LOGGER = logging.getLogger(__name__)
 
