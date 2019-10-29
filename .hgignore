@@ -1,10 +1,6 @@
 syntax: glob
 
 *.state
-
-lib/
-ota/firmware/
-ota/build/
-ota/*.key
-ota/config.h
-ota/yaota8266.bin
+.pytest_cache/*
+.coverage
+htmlcov/*

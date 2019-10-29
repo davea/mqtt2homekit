@@ -1,6 +1,6 @@
 import logging
 
-from bridge import MQTTBridge
+from .bridge import MQTTBridge
 
 logging.basicConfig(level=logging.DEBUG)
 
