@@ -118,7 +118,7 @@ class Accessory(accessory.Accessory):
         characteristic.notify()
 
     def no_response(self):
-        LOGGER.debug('Marking {accessory} as Not Responding'.format(self))
+        LOGGER.debug('Marking {} as Not Responding'.format(self))
         for service in self.services[1:]:
             for characteristic in service.characteristics:
                 characteristic.value = ''

@@ -10,6 +10,7 @@ name = "pypi"
 [dev-packages]
 pytest = "*"
 pytest-coverage = "*"
+pytest-mock = "*"
 
 [requires]
 python_version = "3.7"
