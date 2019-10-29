@@ -111,6 +111,7 @@ class Accessory(accessory.Accessory):
             self.iid_manager.assign(characteristic)
             characteristic.broker = self
             service.add_characteristic(characteristic)
+            self.driver.config_changed()
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
         characteristic.notify()
