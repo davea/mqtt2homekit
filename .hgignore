@@ -3,3 +3,4 @@ syntax: glob
 *.state
 .pytest_cache/*
 .coverage
+htmlcov/*
