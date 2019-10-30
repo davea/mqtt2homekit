@@ -1,6 +1,6 @@
 import json
+import pathlib
 from io import StringIO
-import tempfile
 from unittest.mock import MagicMock
 
 from mqtt2homekit.bridge import MQTTBridge
@@ -8,9 +8,7 @@ from mqtt2homekit.encoder import BridgeEncoder
 
 
 def test_load_optional_characteristic():
-    persist_file = tempfile.mktemp()
-    open(persist_file, 'w').write(open('tests/bridge_1.state').read())
-    bridge = MQTTBridge(display_name='Bridge', persist_file=persist_file, mqtt_server=None)
+    bridge = MQTTBridge(display_name='Bridge', persist_file='tests/bridge_1.state', mqtt_server=None)
     lightbulb = bridge.accessories[2].get_service('Lightbulb')
     assert lightbulb.characteristics[1].display_name == 'Brightness'
 
