@@ -1,0 +1,18 @@
+image: alpine/edge
+environment:
+  project mqtt2homekit
+packages:
+  - python3
+  - pipenv
+sources:
+  - hg+https://hg.sr.ht/~schinckel/mqtt2homekit
+tasks:
+  - setup: |
+      cd mqtt2homekit
+      pipenv install --dev
+  - lint: |
+      cd mqtt2homekit
+      flake8 --count
+  - build: |
+      cd mqtt2homekit
+      PYTHONPATH=. pipenv run pytest --cov=mqtt2homekit/
