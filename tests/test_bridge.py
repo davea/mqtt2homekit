@@ -23,13 +23,21 @@ def test_add_and_remove_accessory(mocker):
     # Should create a new one.
     bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb')
     assert bulb
+    assert len(bridge.accessories) == 1
 
     # Should fetch the existing one.
     bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb')
     assert bulb
+    assert len(bridge.accessories) == 1
 
     # Should create a new one: different code path for second accessory though.
     temp = bridge.get_or_create_accessory('Foo', 'TemperatureSensor')
     assert temp
+    assert len(bridge.accessories) == 1
 
+    # We can remove an accessory.
+    bridge.remove_accessory('Foo')
+    assert len(bridge.accessories) == 0
+
+    # Repeated removal (or removal of non existent accessory) continues silently.
     bridge.remove_accessory('Foo')
