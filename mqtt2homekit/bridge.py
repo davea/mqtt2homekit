@@ -1,21 +1,18 @@
+import logging
 import random
 import signal
 import time
-import logging
 from functools import partial
+from urllib.parse import urlparse
 
 from paho.mqtt import client as mqtt
-
 from pyhap.accessory import Bridge
-from pyhap.loader import get_loader
 from pyhap.accessory_driver import AccessoryDriver
-
-from urllib.parse import urlparse
+from pyhap.loader import get_loader
 
 from .accessory import Accessory
 from .encoder import BridgeEncoder
 from .utils import display_name
-
 
 LOGGER = logging.getLogger(__name__)
 

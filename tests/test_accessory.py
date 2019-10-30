@@ -1,6 +1,6 @@
 from pyhap.accessory_driver import AccessoryDriver
 
-from mqtt2homekit.accessory import clean_value, Accessory
+from mqtt2homekit.accessory import Accessory, clean_value
 from mqtt2homekit.loader import loader
 
 

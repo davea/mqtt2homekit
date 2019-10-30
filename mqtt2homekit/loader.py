@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 from pyhap.loader import get_loader
 
 loader = get_loader()
