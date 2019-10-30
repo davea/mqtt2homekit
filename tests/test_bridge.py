@@ -63,3 +63,15 @@ def test_handle_mqtt_messages(bridge, mocker):
 
     bridge.handle_mqtt_message(None, None, MQTTMessage(topic=b'Homekit/Foo/Lightbulb/On'))
     assert not bridge.accessories
+
+
+def test_setting_characteristics(bridge):
+    bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb')
+    on = bulb.get_service('Lightbulb').get_characteristic('On')
+    assert on.setter_callback
+    on.client_update_value(1)
+
+
+def test_setting_Accessory(bridge):
+    name = bridge.get_service('AccessoryInformation').get_characteristic('Name')
+    name.client_update_value('Renamed')
