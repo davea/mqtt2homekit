@@ -1,6 +1,13 @@
 MQTT to HomeKit
 ==================
 
+|build-status|
+
+.. |build-status| image:: https://builds.sr.ht/~schinckel/mqtt2homekit.svg
+                  :height: 20pt
+                  :alt: Build status
+                  :target: https://builds.sr.ht/~schinckel/mqtt2homekit?
+
 Transparently bridge an MQTT topic tree to HomeKit.
 
 * Register as a HomeKit Bridge.
