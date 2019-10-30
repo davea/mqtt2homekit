@@ -1,21 +1,7 @@
-import tempfile
-
 from paho.mqtt.client import MQTTMessage
 import pyhap.accessory_driver
-import pytest
 
 from mqtt2homekit.accessory import Accessory
-from mqtt2homekit.bridge import MQTTBridge
-
-
-@pytest.fixture
-def bridge(mocker):
-    mocker.patch('pyhap.accessory_driver.AccessoryDriver.update_advertisement')
-    return MQTTBridge(
-        display_name='Test Bridge',
-        persist_file=tempfile.mktemp(),
-        mqtt_server=None
-    )
 
 
 class Message(MQTTMessage):
