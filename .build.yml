@@ -1,6 +1,4 @@
 image: debian/stable
-environment:
-  project: mqtt2homekit
 packages:
   - python3
   - pipenv
