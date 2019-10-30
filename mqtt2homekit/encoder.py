@@ -50,7 +50,7 @@ class BridgeEncoder(AccessoryEncoder):
             }
             for aid, accessory in bridge.accessories.items() if aid != 1
         ]
-        return json.dump(state, fp, indent=2)
+        json.dump(state, fp, indent=2)
 
     def load_into(self, fp, state):
         bridge = self.bridge
