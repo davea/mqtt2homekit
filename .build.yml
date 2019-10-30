@@ -19,4 +19,4 @@ tasks:
       PYTHONPATH=. pipenv run pytest --cov=mqtt2homekit/
   - coverage: |
       cd mqtt2homekit
-      coverage html
+      pipenv run coverage html
