@@ -1,6 +1,6 @@
 image: alpine/edge
 environment:
-  project mqtt2homekit
+  project: mqtt2homekit
 packages:
   - python3
   - pipenv
