@@ -43,6 +43,7 @@ A switch could subscribe to::
 
 This is the topic to which the state change would be sent to when HomeKit triggers an On/Off event.
 
+Because HomeKit sometimes sends `True` or `False`, and sometimes sends `1` or `0`, we normalise this to the integer value that corresponds to the boolean value.
 
 Removing accessories.
 ---------------------
