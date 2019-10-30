@@ -12,6 +12,8 @@ pytest = "*"
 pytest-coverage = "*"
 pytest-mock = "*"
 flake8 = "*"
+mypy = "*"
+isort = "*"
 
 [requires]
 python_version = "3.7"

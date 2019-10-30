@@ -1,4 +1,4 @@
-image: alpine/edge
+image: debian/stable
 environment:
   project: mqtt2homekit
 packages:
@@ -12,7 +12,8 @@ tasks:
       pipenv install --dev
   - lint: |
       cd mqtt2homekit
-      flake8 --count
+      pipenv run flake8 --count
+      pipenv run isort --check-only
   - build: |
       cd mqtt2homekit
       PYTHONPATH=. pipenv run pytest --cov=mqtt2homekit/

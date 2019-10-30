@@ -1,5 +1,5 @@
-from paho.mqtt.client import MQTTMessage
 import pyhap.accessory_driver
+from paho.mqtt.client import MQTTMessage
 
 from mqtt2homekit.accessory import Accessory
 
