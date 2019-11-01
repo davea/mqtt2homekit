@@ -15,5 +15,15 @@
       "AirPressure"
     ],
     "UUID": "E863F00A-079E-48FF-8F27-9C2605A29F52"
+  },
+  "Weather": {
+    "RequiredCharacteristics": [
+      "CurrentTemperature"
+    ],
+    "OptionalCharacteristics": [
+      "CurrentRelativeHumidity",
+      "CurrentAirPressure"
+    ],
+    "UUID": "E863F001-079E-48FF-8F27-9C2605A29F52"
   }
 }
