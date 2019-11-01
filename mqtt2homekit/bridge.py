@@ -1,6 +1,7 @@
 import logging
 import random
 import signal
+import sys
 import time
 from functools import partial
 from urllib.parse import urlparse
@@ -130,7 +131,11 @@ class MQTTBridge(Bridge):
         self.client = mqtt.Client()
         self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
         self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
-        self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
+        try:
+            self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
+        except ConnectionRefusedError:
+            LOGGER.critical('Unable to connect to MQTT Broker')
+            return
         self.client.loop_start()
         await super().run()
 

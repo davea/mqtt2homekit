@@ -9,5 +9,11 @@
       "Energy"
     ],
     "UUID": "00000047-0000-1000-8000-0026BB765291"
+  },
+  "AirPressureSensor": {
+    "RequiredCharacteristics": [
+      "AirPressure"
+    ],
+    "UUID": "E863F00A-079E-48FF-8F27-9C2605A29F52"
   }
 }
