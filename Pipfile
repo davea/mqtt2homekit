@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 "HAP-python[QRCode]" = "*"
 "paho-mqtt" = "*"
+click = "*"
 
 [dev-packages]
 pytest = "*"
