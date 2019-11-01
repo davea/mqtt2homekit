@@ -2,21 +2,43 @@
   "Voltage": {
     "Format": "float",
     "Permissions": ["pr", "ev"],
-    "UUID": "E863F10A-079E-48FF-8F27-9C2605A29F52"
+    "UUID": "E863F10A-079E-48FF-8F27-9C2605A29F52",
+    "unit": "V"
   },
   "Power": {
     "Format": "float",
     "Permissions": ["pr", "ev"],
-    "UUID": "E863F10D-079E-48FF-8F27-9C2605A29F52"
+    "UUID": "E863F10D-079E-48FF-8F27-9C2605A29F52",
+    "unit": "kW"
   },
   "Energy": {
     "Format": "float",
     "Permissions": ["pr", "ev"],
-    "UUID": "E863F10C-079E-48FF-8F27-9C2605A29F52"
+    "UUID": "E863F10C-079E-48FF-8F27-9C2605A29F52",
+    "unit": "kWh"
   },
   "Current": {
     "Format": "float",
     "Permissions": ["pr", "ev"],
-    "UUID": "E863F126-079E-48FF-8F27-9C2605A29F52"
+    "UUID": "E863F126-079E-48FF-8F27-9C2605A29F52",
+    "unit": "A"
+  },
+  "AirPressure": {
+    "Format": "uint16",
+    "unit": "hPa",
+    "minvalue": 700,
+    "maxValue": 1100,
+    "minStep": 1,
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F10F-079E-48FF-8F27-9C2605A29F52"
+  },
+  "Elevation": {
+    "Format": "uint16",
+    "unit": "m",
+    "minValue": -430,
+    "maxValue": 8850,
+    "minStep": 10,
+    "Permissions": ["pr", "ev"],
+    "UUID": "E863F130-079E-48FF-8F27-9C2605A29F52"
   }
 }
