@@ -1,0 +1,20 @@
+image: debian/stable
+packages:
+  - python3
+  - pipenv
+sources:
+  - hg+https://hg.sr.ht/~schinckel/mqtt2homekit
+tasks:
+  - setup: |
+      cd mqtt2homekit
+      pipenv install --dev
+  - lint: |
+      cd mqtt2homekit
+      pipenv run flake8 --count
+      pipenv run isort --check-only
+  - build: |
+      cd mqtt2homekit
+      PYTHONPATH=. pipenv run pytest --cov=mqtt2homekit/
+  - coverage: |
+      cd mqtt2homekit
+      pipenv run coverage html

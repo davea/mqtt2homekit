@@ -1,6 +1,13 @@
 MQTT to HomeKit
 ==================
 
+|build-status|
+
+.. |build-status| image:: https://builds.sr.ht/~schinckel/mqtt2homekit.svg
+                  :height: 20pt
+                  :alt: Build status
+                  :target: https://builds.sr.ht/~schinckel/mqtt2homekit?
+
 Transparently bridge an MQTT topic tree to HomeKit.
 
 * Register as a HomeKit Bridge.
@@ -43,6 +50,7 @@ A switch could subscribe to::
 
 This is the topic to which the state change would be sent to when HomeKit triggers an On/Off event.
 
+Because HomeKit sometimes sends `True` or `False`, and sometimes sends `1` or `0`, we normalise this to the integer value that corresponds to the boolean value.
 
 Removing accessories.
 ---------------------

@@ -11,11 +11,15 @@ verify_ssl = true
 [packages]
 "HAP-python[QRCode]" = "*"
 "paho-mqtt" = "*"
+click = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-coverage = "*"
 pytest-mock = "*"
+flake8 = "*"
+mypy = "*"
+isort = "*"
 
 [requires]
 python_version = "3.7"

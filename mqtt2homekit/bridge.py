@@ -1,21 +1,19 @@
+import logging
 import random
 import signal
+import sys
 import time
-import logging
 from functools import partial
+from urllib.parse import urlparse
 
 from paho.mqtt import client as mqtt
-
 from pyhap.accessory import Bridge
-from pyhap.loader import get_loader
 from pyhap.accessory_driver import AccessoryDriver
-
-from urllib.parse import urlparse
+from pyhap.loader import get_loader
 
 from .accessory import Accessory
 from .encoder import BridgeEncoder
 from .utils import display_name
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -133,7 +131,11 @@ class MQTTBridge(Bridge):
         self.client = mqtt.Client()
         self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
         self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
-        self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
+        try:
+            self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
+        except ConnectionRefusedError:
+            LOGGER.critical('Unable to connect to MQTT Broker')
+            return
         self.client.loop_start()
         await super().run()
 
