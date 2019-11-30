@@ -108,11 +108,10 @@ class Accessory(accessory.Accessory):
             characteristic = service.get_characteristic(characteristic_name)
         except ValueError:
             characteristic = loader.get_char(characteristic_name)
-            if not characteristic:
-                raise
             self.iid_manager.assign(characteristic)
             characteristic.broker = self
             service.add_characteristic(characteristic)
+            self.driver.config_changed()
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
         characteristic.notify()

@@ -1,0 +1,35 @@
+{
+  "mac": "AB:CD:EF:01:23:45",
+  "config_version": 23,
+  "paired_clients": {},
+  "private_key": "35d02fbe69352a96d38ed0e04f24eef64bc80103141bca7009f6838fae18df45",
+  "public_key": "0c658dcc16f4adf62bf40957075727e7490cedd6ecd71a6d7f5cabf1ba5e3893",
+  "accessories": [
+    {
+      "accessory_id": "accessory_one",
+      "name": "Lightbulb",
+      "services": [
+        "Lightbulb"
+      ],
+      "aid": 2,
+      "last_seen": 1572409303.818848,
+      "optional_characteristics": {
+        "Lightbulb": [
+          "Brightness"
+        ]
+      }
+    },
+    {
+      "accessory_id": "Lightbulb",
+      "name": "Lightbulb",
+      "services": [
+        "Lightbulb"
+      ],
+      "aid": 3,
+      "last_seen": null,
+      "optional_characteristics": {
+        "Lightbulb": []
+      }
+    }
+  ]
+}
