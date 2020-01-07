@@ -1,7 +1,6 @@
 import logging
 import random
 import signal
-import sys
 import time
 from functools import partial
 from urllib.parse import urlparse
