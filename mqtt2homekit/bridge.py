@@ -37,6 +37,7 @@ class MQTTBridge(Bridge):
         self.persist_file = kwargs.pop('persist_file')
         self.mqtt_server = urlparse(kwargs.pop('mqtt_server'))
         self.port = random.randint(50000, 60000)
+        self.prefix = kwargs.pop('prefix', 'HomeKit')
         driver = build_driver(self, self.port, self.persist_file)
         # This sets self.driver
         super().__init__(driver, display_name, **kwargs)
@@ -73,7 +74,7 @@ class MQTTBridge(Bridge):
     def config_changed(self):
         self.driver.config_changed()
 
-    def get_or_create_accessory(self, accessory_id, service_type):
+    def get_or_create_accessory(self, accessory_id, service_type, index=0):
         """
         Dynamically find or add an accessory with the provided id and service_type.
 
@@ -88,7 +89,7 @@ class MQTTBridge(Bridge):
 
         if accessory:
             # Does this accessory have this service_type?
-            if not accessory.get_service(service_type):
+            if not accessory.get_service(service_type, index):
                 # We need to add the service, but remove the accessory and then re-add it.
                 # Otherwise, HomeKit will get all screwed up, and the bridge won't work anymore.
                 self.accessories.pop(accessory.aid)
@@ -97,11 +98,12 @@ class MQTTBridge(Bridge):
                 self.add_accessory(accessory)
                 self.config_changed()
         else:
-            # Did not find the accessory: we need to create it.
+            # Did not find the accessory: we need to create it. Ensure we have
+            # (index + 1) instances of the service.
             accessory = Accessory(
                 self.driver,
                 display_name(service_type),
-                services=[service_type],
+                services=[service_type] * (index + 1),
                 accessory_id=accessory_id,
             )
             self.add_accessory(accessory)
@@ -128,8 +130,9 @@ class MQTTBridge(Bridge):
         Create, and start, a driver for this accessory.
         """
         self.client = mqtt.Client()
-        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('HomeKit/#', 1)
-        self.client.message_callback_add('HomeKit/+/+/+', self.handle_mqtt_message)
+        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('{}/#'.format(self.prefix), 1)
+        self.client.message_callback_add('{}/+/+/+'.format(self.prefix), self.handle_mqtt_message)
+        self.client.message_callback_add('{}/+/+/+/+'.format(self.prefix), self.handle_mqtt_message)
         try:
             self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
         except ConnectionRefusedError:
@@ -180,7 +183,12 @@ class MQTTBridge(Bridge):
             self.config_changed()
 
     def handle_mqtt_message(self, client, userdata, message):
-        _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
+        try:
+            _prefix, accessory_id, service_type, characteristic = message.topic.split('/')
+            index = 0
+        except ValueError:
+            _prefix, accessory_id, service_type, index, characteristic = message.topic.split('/')
+            index = int(index)
 
         if service_type == 'AccessoryInformation':
             return
@@ -195,17 +203,18 @@ class MQTTBridge(Bridge):
             ))
             return self.remove_accessory(accessory_id)
         try:
-            accessory = self.get_or_create_accessory(accessory_id, service_type)
+            accessory = self.get_or_create_accessory(accessory_id, service_type, index)
             accessory._last_seen = time.time()
             value = message.payload.decode('ascii')
-            LOGGER.debug('SET {accessory_id}: {service_type}.{characteristic} -> {value}'.format(
+            LOGGER.debug('SET {accessory_id}: {service_type}[{index}].{characteristic} -> {value}'.format(
                 accessory_id=accessory_id,
                 service_type=service_type,
+                index=index,
                 characteristic=characteristic,
                 value=value,
             ))
             # If we have an empty message, then perhaps we need to do nothing...?
-            accessory.set_characteristic(service_type, characteristic, value)
+            accessory.set_characteristic(service_type, index, characteristic, value)
         except Exception as exc:
             LOGGER.error('Exception handling message {}: {}'.format(exc.__class__.__name__, exc.args))
 
@@ -230,11 +239,16 @@ class MQTTBridge(Bridge):
             LOGGER.info('Identify: {accessory_id}'.format(accessory_id=accessory))
             return
 
+        service_topic_name = service.display_name
+        if len(accessory.get_services(service_topic_name)) > 1:
+            service_topic_name += '/' + accessory.get_service_index(service)
+
         try:
             characteristic.set_value(value)
-            topic = 'HomeKit/{accessory_id}/{service}/{characteristic.display_name}'.format(
+            topic = '{prefix}/{accessory_id}/{service}/{characteristic.display_name}'.format(
+                prefix=self.prefix,
                 accessory_id=accessory.accessory_id,
-                service=service.display_name,
+                service=service_topic_name,
                 characteristic=characteristic,
             )
             LOGGER.debug(topic)
