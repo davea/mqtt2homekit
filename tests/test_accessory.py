@@ -33,7 +33,7 @@ def test_Accesssory_new_char(mocker):
         services=['Lightbulb'],
         driver=AccessoryDriver()
     )
-    acc.set_characteristic('Lightbulb', 'Brightness', '75')
+    acc.set_characteristic('Lightbulb', 0, 'Brightness', '75')
     AccessoryDriver.config_changed.assert_called_once()
 
 
@@ -47,6 +47,6 @@ def test_Accessory_no_response(mocker):
         services=['Lightbulb'],
         driver=AccessoryDriver()
     )
-    acc.set_characteristic('Lightbulb', 'On', '1')
+    acc.set_characteristic('Lightbulb', 0, 'On', '1')
     acc.no_response()
     AccessoryDriver.config_changed.assert_not_called()
