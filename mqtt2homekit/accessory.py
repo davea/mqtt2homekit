@@ -102,8 +102,24 @@ class Accessory(accessory.Accessory):
         info_service.configure_char('FirmwareRevision', value="1")
         self.add_service(info_service)
 
-    def set_characteristic(self, service_type, characteristic_name, value):
-        service = self.get_service(service_type)
+    def get_service(self, name, index=0):
+        try:
+            return self.get_services(name)[index]
+        except IndexError:
+            return None
+
+    def get_services(self, name):
+        return [
+            service
+            for service in self.services
+            if service.display_name == name
+        ]
+
+    def get_service_index(self, service):
+        return self.get_services(service.display_name).index(service)
+
+    def set_characteristic(self, service_type, index, characteristic_name, value):
+        service = self.get_service(service_type, index)
         try:
             characteristic = service.get_characteristic(characteristic_name)
         except ValueError:

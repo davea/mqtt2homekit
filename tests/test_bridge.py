@@ -26,9 +26,17 @@ def test_add_and_remove_accessory(bridge, mocker):
     assert bulb
     assert len(bridge.accessories) == 1
 
-    # Should create a new one: different code path for second accessory though.
+    # Should create a new service: different code path for second service though.
     temp = bridge.get_or_create_accessory('Foo', 'TemperatureSensor')
     assert temp
+    assert temp == bulb
+    assert len(bridge.accessories) == 1
+
+    bulb2 = bridge.get_or_create_accessory('Foo', 'Lightbulb', index=3)
+    assert bulb2
+    assert bulb == bulb2
+    # Should be 4 bulbs, and the temperature sensor.
+    assert len(bulb2.services)
     assert len(bridge.accessories) == 1
 
     # We can remove an accessory.
@@ -42,20 +50,39 @@ def test_add_and_remove_accessory(bridge, mocker):
 def test_handle_mqtt_messages(bridge, mocker):
     mocker.patch('mqtt2homekit.accessory.Accessory.set_characteristic')
 
-    bridge.handle_mqtt_message(None, None, Message(topic=b'Homekit/Foo/Lightbulb/On', payload=b'1'))
+    bridge.handle_mqtt_message(None, None, Message(topic=b'__TEST__/Foo/Lightbulb/On', payload=b'1'))
     Accessory.set_characteristic.assert_called_once()
 
-    bridge.handle_mqtt_message(None, None, MQTTMessage(topic=b'Homekit/Foo/AccessoryInformation/Name'))
+    bridge.handle_mqtt_message(None, None, MQTTMessage(topic=b'__TEST__/Foo/AccessoryInformation/Name'))
 
-    bridge.handle_mqtt_message(None, None, MQTTMessage(topic=b'Homekit/Foo/Lightbulb/On'))
+    bridge.handle_mqtt_message(None, None, MQTTMessage(topic=b'__TEST__/Foo/Lightbulb/On'))
     assert not bridge.accessories
 
 
-def test_setting_characteristics(bridge):
+def test_accessory_with_multiple_services(bridge, mocker):
+    mocker.patch('mqtt2homekit.accessory.Accessory.set_characteristic')
+    bridge.handle_mqtt_message(None, None, Message(topic=b'__TEST__/Foo/Lightbulb/3/On', payload=b'1'))
+    Accessory.set_characteristic.assert_called_once()
+    assert bridge.accessories
+    assert bridge.client
+    bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb', index=3)
+    assert bulb.get_services('Lightbulb')[3]
+
+
+def test_setting_characteristics(bridge, mocker):
     bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb')
     on = bulb.get_service('Lightbulb').get_characteristic('On')
     assert on.setter_callback
     on.client_update_value(1)
+    bridge.client.publish.assert_called_once_with('__TEST__/Foo/Lightbulb/On', b'1', qos=2, retain=True)
+
+
+def test_setting_characteristics_multiple_services(bridge, mocker):
+    bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb', 3)
+    on = bulb.get_service('Lightbulb', 0).get_characteristic('On')
+    assert on.setter_callback
+    on.client_update_value(1)
+    bridge.client.publish.assert_called_once_with('__TEST__/Foo/Lightbulb/0/On', b'1', qos=2, retain=True)
 
 
 def test_setting_Accessory(bridge):
