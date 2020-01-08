@@ -241,7 +241,7 @@ class MQTTBridge(Bridge):
 
         service_topic_name = service.display_name
         if len(accessory.get_services(service_topic_name)) > 1:
-            service_topic_name += '/' + accessory.get_service_index(service)
+            service_topic_name += '/{}'.format(accessory.get_service_index(service))
 
         try:
             characteristic.set_value(value)
