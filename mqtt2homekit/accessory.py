@@ -99,7 +99,7 @@ class Accessory(accessory.Accessory):
         info_service.configure_char('SerialNumber', value=self.accessory_id)
         info_service.configure_char('Manufacturer', value='Matthew Schinckel')
         info_service.configure_char('Model', value=self._model)
-        info_service.configure_char('FirmwareRevision', value="1")
+        info_service.configure_char('FirmwareRevision', value='1')
         self.add_service(info_service)
 
     def get_service(self, name, index=0):
@@ -127,10 +127,14 @@ class Accessory(accessory.Accessory):
             self.iid_manager.assign(characteristic)
             characteristic.broker = self
             service.add_characteristic(characteristic)
+            # This is a dynamically added method that sets the setter_callback. If it's missing,
+            # then this Accessory has not been added to a Bridge, and the setter_callback will be
+            # set on this Characteristic when it is added to the Bridge.
+            if hasattr(self, 'add_characteristic'):
+                self.add_characteristic(service, characteristic)
             self.driver.config_changed()
         value = clean_value(characteristic, value)
         characteristic.set_value(value)
-        characteristic.notify()
 
     def no_response(self):
         LOGGER.debug('Marking {} as Not Responding'.format(self))

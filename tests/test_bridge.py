@@ -76,6 +76,15 @@ def test_setting_characteristics(bridge, mocker):
     on.client_update_value(1)
     bridge.client.publish.assert_called_once_with('__TEST__/Foo/Lightbulb/On', b'1', qos=2, retain=True)
 
+    bulb.set_characteristic('Lightbulb', 0, 'Brightness', '0')
+    brightness = bulb.get_service('Lightbulb').get_characteristic('Brightness')
+    assert brightness.setter_callback
+    assert brightness.notify
+    brightness.client_update_value(0)
+    bridge.client.publish.assert_called_with('__TEST__/Foo/Lightbulb/Brightness', b'0', qos=2, retain=True)
+    brightness.client_update_value(82)
+    bridge.client.publish.assert_called_with('__TEST__/Foo/Lightbulb/Brightness', b'82', qos=2, retain=True)
+
 
 def test_setting_characteristics_multiple_services(bridge, mocker):
     bulb = bridge.get_or_create_accessory('Foo', 'Lightbulb', 3)
