@@ -59,17 +59,23 @@ class MQTTBridge(Bridge):
         # This will allow us to push onto the MQTT when we get notified by HomeKit that
         # something needs to change.
         super().add_accessory(accessory)
+
+        def add_characteristic(service, characteristic):
+            LOGGER.debug('Set setter_callback for {accessory}: {service}.{characteristic}'.format(
+                accessory=accessory,
+                service=service,
+                characteristic=characteristic,
+            ))
+            characteristic.setter_callback = partial(self.send_mqtt_message, accessory, service, characteristic)
+
+        accessory.add_characteristic = add_characteristic
+
         for service in accessory.services:
             if service.display_name == 'AccessoryInformation':
                 continue
 
             for characteristic in service.characteristics:
-                LOGGER.debug('Set setter_callback for {accessory}: {service}.{characteristic}'.format(
-                    accessory=accessory,
-                    service=service,
-                    characteristic=characteristic,
-                ))
-                characteristic.setter_callback = partial(self.send_mqtt_message, accessory, service, characteristic)
+                accessory.add_characteristic(service, characteristic)
 
     def config_changed(self):
         self.driver.config_changed()
