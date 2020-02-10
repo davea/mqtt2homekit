@@ -131,14 +131,17 @@ class MQTTBridge(Bridge):
         self.accessories.pop(aid)
         self.config_changed()
 
+    def topics(self):
+        return [ ('{}/+/+/+'.format(self.prefix), 1), ('{}/+/+/+/+'.format(self.prefix), 1) ]
+
     async def run(self):
         """
         Create, and start, a driver for this accessory.
         """
         self.client = mqtt.Client()
-        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe('{}/#'.format(self.prefix), 1)
-        self.client.message_callback_add('{}/+/+/+'.format(self.prefix), self.handle_mqtt_message)
-        self.client.message_callback_add('{}/+/+/+/+'.format(self.prefix), self.handle_mqtt_message)
+        self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe(self.topics())
+        for topic, qos in self.topics():
+            self.client.message_callback_add(topic, self.handle_mqtt_message)
         try:
             self.client.connect(self.mqtt_server.hostname, port=self.mqtt_server.port or 1883, keepalive=30)
         except ConnectionRefusedError:
@@ -245,18 +248,13 @@ class MQTTBridge(Bridge):
             LOGGER.info('Identify: {accessory_id}'.format(accessory_id=accessory))
             return
 
-        service_topic_name = service.display_name
-        if len(accessory.get_services(service_topic_name)) > 1:
-            service_topic_name += '/{}'.format(accessory.get_service_index(service))
+        index = None
+        if len(accessory.get_services(service.display_name)) > 1:
+            index = accessory.get_service_index(service)
 
         try:
             characteristic.set_value(value)
-            topic = '{prefix}/{accessory_id}/{service}/{characteristic.display_name}'.format(
-                prefix=self.prefix,
-                accessory_id=accessory.accessory_id,
-                service=service_topic_name,
-                characteristic=characteristic,
-            )
+            topic = self._get_topic_for_message(accessory, service, index, characteristic)
             LOGGER.debug(topic)
 
             if value in (True, False):
@@ -270,3 +268,15 @@ class MQTTBridge(Bridge):
             )
         except Exception as exc:
             LOGGER.error('Exception sending message: {}'.format(exc.args))
+
+    def _get_topic_for_message(self, accessory, service, index, characteristic):
+        service_topic_name = service.display_name
+        if index is not None:
+            service_topic_name += '/{}'.format(index)
+
+        return '{prefix}/{accessory_id}/{service}/{characteristic}'.format(
+            prefix=self.prefix,
+            accessory_id=accessory.accessory_id,
+            service=service_topic_name,
+            characteristic=characteristic.display_name,
+        )
