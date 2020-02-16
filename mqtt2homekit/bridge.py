@@ -106,15 +106,18 @@ class MQTTBridge(Bridge):
         else:
             # Did not find the accessory: we need to create it. Ensure we have
             # (index + 1) instances of the service.
-            accessory = Accessory(
+            accessory = self.create_accessory(service_type, accessory_id, index)
+            self.add_accessory(accessory)
+            self.config_changed()
+        return accessory
+
+    def create_accessory(self, service_type, accessory_id, index):
+        return Accessory(
                 self.driver,
                 display_name(service_type),
                 services=[service_type] * (index + 1),
                 accessory_id=accessory_id,
             )
-            self.add_accessory(accessory)
-            self.config_changed()
-        return accessory
 
     def get_accessory(self, accessory_id):
         for accessory in self.accessories.values():
