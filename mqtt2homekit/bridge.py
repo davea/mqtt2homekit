@@ -263,9 +263,11 @@ class MQTTBridge(Bridge):
             if value in (True, False):
                 value = int(value)
 
+            payload = self._get_payload_for_message(topic, value)
+
             self.client.publish(
                 topic,
-                str(value).encode(),
+                payload,
                 qos=2,
                 retain=True,
             )
@@ -283,3 +285,6 @@ class MQTTBridge(Bridge):
             service=service_topic_name,
             characteristic=characteristic.display_name,
         )
+
+    def _get_payload_for_message(self, topic, value):
+        return str(value).encode()
