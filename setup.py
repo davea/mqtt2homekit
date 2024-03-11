@@ -13,5 +13,5 @@ setup(
     url='https://hg.sr.ht/~schinckel/mqtt2homekit',
     keywords='mqtt',
     packages=find_packages(),
-    install_requires=['paho-mqtt', 'HAP-python[QRCode]'],
+    install_requires=['paho-mqtt<3', 'HAP-python[QRCode]'],
 )

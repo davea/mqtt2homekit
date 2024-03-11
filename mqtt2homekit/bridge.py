@@ -141,7 +141,7 @@ class MQTTBridge(Bridge):
         """
         Create, and start, a driver for this accessory.
         """
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
         self.client.on_connect = lambda client, userdata, flags, rc: client.subscribe(self.topics())
         for topic, qos in self.topics():
             self.client.message_callback_add(topic, self.handle_mqtt_message)
@@ -155,7 +155,7 @@ class MQTTBridge(Bridge):
 
     async def stop(self):
         await super().stop()
-        self.client.loop_stop(force=True)
+        self.client.loop_stop()
         # Make sure we write our current data.
         self.driver.persist()
 
